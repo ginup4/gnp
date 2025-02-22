@@ -69,6 +69,7 @@ void yyerror(char *);
 %nterm <ast_type*> type
 %nterm <ast_type*> typeseq
 %nterm <ast_stmt*> stmts
+%nterm <ast_stmt*> stmt
 %nterm <ast_stmt*> loop_stmt
 %nterm <ast_stmt*> while_stmt
 %nterm <ast_stmt*> if_stmt
@@ -148,40 +149,44 @@ typeseq:
 ;
 
 stmts:
-    %empty { $$ = NULL; }
-|   stmts var_decl { $$ = NULL; }
-|   stmts expr ';' { $$ = NULL; }
-|   stmts RETURN ';' { $$ = NULL; }
-|   stmts RETURN expr ';' { $$ = NULL; }
-|   stmts BREAK ';' { $$ = NULL; }
-|   stmts CONTINUE ';' { $$ = NULL; }
-|   stmts loop_stmt { $$ = NULL; }
-|   stmts while_stmt { $$ = NULL; }
-|   stmts if_stmt { $$ = NULL; }
+    stmt { $$ = $1; }
+|   stmts stmt { ast_stmt_append(&$1->next, $2); $$ = $1; }
+;
+
+stmt:
+    var_decl { $$ = ast_stmt_create(AST_STMT_VAR, $1, NULL, NULL, NULL); }
+|   expr ';' { $$ = ast_stmt_create(AST_STMT_EXPR, NULL, $1, NULL, NULL); }
+|   RETURN ';' { $$ = ast_stmt_create(AST_STMT_RETURN, NULL, NULL, NULL, NULL); }
+|   RETURN expr ';' { $$ = ast_stmt_create(AST_STMT_RETURN, NULL, $2, NULL, NULL); }
+|   BREAK ';' { $$ = ast_stmt_create(AST_STMT_BREAK, NULL, NULL, NULL, NULL); }
+|   CONTINUE ';' { $$ = ast_stmt_create(AST_STMT_CONTINUE, NULL, NULL, NULL, NULL); }
+|   loop_stmt { $$ = $1; }
+|   while_stmt { $$ = $1; }
+|   if_stmt { $$ = $1; }
 ;
 
 loop_stmt:
-    LOOP '{' stmts '}' { $$ = NULL; }
+    LOOP '{' stmts '}' { $$ = ast_stmt_create(AST_STMT_LOOP, NULL, NULL, $3, NULL); }
 ;
 
 while_stmt:
-    WHILE expr '{' stmts '}' { $$ = NULL; }
+    WHILE expr '{' stmts '}' { $$ = ast_stmt_create(AST_STMT_WHILE, NULL, $2, $4, NULL); }
 ;
 
 if_stmt:
-    IF expr '{' stmts '}' { $$ = NULL; }
-|   IF expr '{' stmts '}' elif_stmt { $$ = NULL; }
-|   IF expr '{' stmts '}' else_stmt { $$ = NULL; }
+    IF expr '{' stmts '}' { $$ = ast_stmt_create(AST_STMT_IF, NULL, $2, $4, NULL); }
+|   IF expr '{' stmts '}' elif_stmt { $$ = ast_stmt_create(AST_STMT_IF, NULL, $2, $4, $6); }
+|   IF expr '{' stmts '}' else_stmt { $$ = ast_stmt_create(AST_STMT_IF, NULL, $2, $4, $6); }
 ;
 
 elif_stmt:
-    ELIF expr '{' stmts '}' { $$ = NULL; }
-|   ELIF expr '{' stmts '}' elif_stmt { $$ = NULL; }
-|   ELIF expr '{' stmts '}' else_stmt { $$ = NULL; }
+    ELIF expr '{' stmts '}' { $$ = ast_stmt_create(AST_STMT_IF, NULL, $2, $4, NULL); }
+|   ELIF expr '{' stmts '}' elif_stmt { $$ = ast_stmt_create(AST_STMT_IF, NULL, $2, $4, $6); }
+|   ELIF expr '{' stmts '}' else_stmt { $$ = ast_stmt_create(AST_STMT_IF, NULL, $2, $4, $6); }
 ;
 
 else_stmt:
-    ELSE '{' stmts '}' { $$ = NULL; }
+    ELSE '{' stmts '}' { $$ = ast_stmt_create(AST_STMT_ELSE, NULL, NULL, $3, NULL); }
 ;
 
 callargs:

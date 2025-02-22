@@ -1,7 +1,7 @@
 ginuc: build/scanner.o build/parser.o build/main.o build/ast.o
 	gcc -o ginuc build/scanner.o build/parser.o build/main.o build/ast.o
 
-build/main.o: main.c ast.h
+build/main.o: main.c ast.h print_ast.c
 	gcc -c -o build/main.o main.c
 
 build/ast.o: ast.c ast.h

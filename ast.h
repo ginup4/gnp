@@ -7,7 +7,7 @@ typedef struct ast_func {
     char *name;
     struct ast_var *args;
     struct ast_type *type;
-    struct ast_stmt *code;
+    struct ast_stmt *body;
     struct ast_func *next;
 } ast_func;
 
@@ -40,15 +40,31 @@ typedef enum ast_type_vnt {
 
 typedef struct ast_type {
     enum ast_type_vnt vnt;
-    int size;
-    int align;
     char *name;
     struct ast_type *subtype;
     struct ast_expr *arrlen;
     struct ast_type *next;
 } ast_type;
 
+typedef enum ast_stmt_vnt {
+    AST_STMT_VAR,
+    AST_STMT_EXPR,
+    AST_STMT_RETURN,
+    AST_STMT_BREAK,
+    AST_STMT_CONTINUE,
+    AST_STMT_LOOP,
+    AST_STMT_WHILE,
+    AST_STMT_IF,
+    AST_STMT_ELSE,
+} ast_stmt_vnt;
+
 typedef struct ast_stmt {
+    enum ast_stmt_vnt vnt;
+    struct ast_var *var;
+    struct ast_expr *expr;
+    struct ast_stmt *body;
+    struct ast_stmt *els;
+    struct ast_stmt *next;
 } ast_stmt;
 
 typedef enum ast_expr_vnt {
@@ -130,6 +146,9 @@ ast_type *ast_type_make_ref(ast_type *);
 ast_type *ast_type_make_arr(ast_type *, ast_expr *);
 ast_type *ast_type_make_slice(ast_type *);
 ast_type *ast_type_make_tuple(ast_type *);
+
+void ast_stmt_append(ast_stmt **, ast_stmt *);
+ast_stmt *ast_stmt_create(ast_stmt_vnt, ast_var *, ast_expr *, ast_stmt *, ast_stmt *);
 
 void ast_expr_append(ast_expr **, ast_expr *);
 ast_expr *ast_expr_create(ast_expr_vnt, char *);

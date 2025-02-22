@@ -8,12 +8,12 @@ void ast_func_append(ast_func **head, ast_func *func) {
     *head = func;
 }
 
-ast_func *ast_func_create(char *name, ast_var *args, ast_type *type, ast_stmt *code) {
+ast_func *ast_func_create(char *name, ast_var *args, ast_type *type, ast_stmt *body) {
     ast_func *ret = malloc(sizeof(ast_func));
     ret->name = name;
     ret->args = args;
     ret->type = type;
-    ret->code = code;
+    ret->body = body;
     ret->next = NULL;
     return ret;
 }
@@ -105,6 +105,24 @@ ast_type *ast_type_make_tuple(ast_type *subtypes) {
     ret->vnt = AST_TYPE_TUPLE;
     ret->subtype = subtypes;
     ret->next = NULL;
+}
+
+void ast_stmt_append(ast_stmt **head, ast_stmt *stmt) {
+    while(*head) {
+        head = &(*head)->next;
+    }
+    *head = stmt;
+}
+
+ast_stmt *ast_stmt_create(ast_stmt_vnt vnt, ast_var *var, ast_expr *expr, ast_stmt *body, ast_stmt *els) {
+    ast_stmt *ret = malloc(sizeof(ast_stmt));
+    ret->vnt = vnt;
+    ret->var = var;
+    ret->expr = expr;
+    ret->body = body;
+    ret->els = els;
+    ret->next = NULL;
+    return ret;
 }
 
 void ast_expr_append(ast_expr **head, ast_expr *expr) {
