@@ -85,7 +85,7 @@ void yyerror(char *);
 %left LOG_AND
 %nonassoc COMP_EQ COMP_NE COMP_LE COMP_GE COMP_LT COMP_GT
 %left '|'
-%left '$' '^'
+%left '&' '^'
 %left '+' '-'
 %left '*' '/' '%'
 %precedence P_NEG
@@ -237,13 +237,13 @@ expr:
 |   expr '/' expr { $$ = ast_expr_make_op(AST_OP_DIV, $1, $3); }
 |   expr '%' expr { $$ = ast_expr_make_op(AST_OP_MOD, $1, $3); }
 |   expr '|' expr { $$ = ast_expr_make_op(AST_OP_BIT_OR, $1, $3); }
-|   expr '$' expr { $$ = ast_expr_make_op(AST_OP_BIT_AND, $1, $3); }
+|   expr '&' expr { $$ = ast_expr_make_op(AST_OP_BIT_AND, $1, $3); }
 |   expr '^' expr { $$ = ast_expr_make_op(AST_OP_BIT_XOR, $1, $3); }
 |   '-' expr %prec P_NEG { $$ = ast_expr_make_op(AST_OP_NEG, NULL, $2); }
 |   '!' expr %prec P_NEG { $$ = ast_expr_make_op(AST_OP_LOG_NOT, NULL, $2); }
 |   '~' expr %prec P_NEG { $$ = ast_expr_make_op(AST_OP_BIT_NOT, NULL, $2); }
 |   '&' expr %prec P_REF { $$ = ast_expr_make_op(AST_OP_REF, NULL, $2); }
-|   '@' expr %prec P_REF { $$ = ast_expr_make_op(AST_OP_DEREF, NULL, $2); }
+|   '*' expr %prec P_REF { $$ = ast_expr_make_op(AST_OP_DEREF, NULL, $2); }
 ;
 
 %%

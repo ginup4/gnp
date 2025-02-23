@@ -1,1 +1,1 @@
-autocmd BufNewFile,BufRead *.gnc set filetype=rust
+autocmd BufNewFile,BufRead *.gnp set filetype=gnp

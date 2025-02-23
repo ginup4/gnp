@@ -16,7 +16,7 @@
 
 %%
 
-\/\/[^\n]*$                 /* comment */
+#[^\n]*$                 /* comment */
 
 fn                          return FN;
 let                         return LET;
@@ -42,33 +42,34 @@ null                        return NUL;
 \"([^\n\"\\]|\\[^\n])*\"    yylval.STR_LIT = strdup(yytext); return STR_LIT;
 '([^\n'\\]|\\[^\n])+\'      yylval.CHAR_LIT = strdup(yytext); return CHAR_LIT;
 
+","                         return yytext[0];
+";"                         return yytext[0];
+":"                         return yytext[0];
+
 "+="                        return ADD_ASGN;
 "-="                        return SUB_ASGN;
 "*="                        return MUL_ASGN;
 "/="                        return DIV_ASGN;
 "%="                        return MOD_ASGN;
 "|="                        return OR_ASGN;
-"$="                        return AND_ASGN;
+"&="                        return AND_ASGN;
 "^="                        return XOR_ASGN;
 
 "=="                        return COMP_EQ;
 "!="                        return COMP_NE;
 "<="                        return COMP_LE;
 ">="                        return COMP_GE;
-"<"                        return COMP_LT;
-">"                        return COMP_GT;
+"<"                         return COMP_LT;
+">"                         return COMP_GT;
 
 "||"                        return LOG_OR;
-"$$"                        return LOG_AND;
+"&&"                        return LOG_AND;
 
 "("|")"|"{"|"}"|"["|"]"     return yytext[0];
-"!"|"~"|"@"|"&"             return yytext[0];
+"!"|"~"                     return yytext[0];
 "%"|"*"|"-"|"+"|"/"         return yytext[0];
-"|"|"$"|"^"                 return yytext[0];
-":"                         return yytext[0];
-";"                         return yytext[0];
+"|"|"^"|"&"                 return yytext[0];
 "="                         return yytext[0];
-","                         return yytext[0];
 "."                         return yytext[0];
 
 [\n\t ]                     /* whitespace */
