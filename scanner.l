@@ -38,7 +38,12 @@ false                       return FALSE;
 null                        return NUL;
 
 [A-Za-z_]([A-Za-z_]|[0-9])* yylval.IDENT = strdup(yytext); return IDENT;
-[0-9]([A-Za-z_]|[0-9])*     yylval.NUM_LIT = strdup(yytext); return NUM_LIT;
+
+[0-9][0-9_]*([iu](size|8|16|32|64))? yylval.NUM_LIT = strdup(yytext); return NUM_LIT;
+0x[a-fA-F0-9_]*([iu](size|8|16|32|64))? yylval.NUM_LIT = strdup(yytext); return NUM_LIT;
+0o[0-7_]*([iu](size|8|16|32|64))? yylval.NUM_LIT = strdup(yytext); return NUM_LIT;
+0b[01_]*([iu](size|8|16|32|64))? yylval.NUM_LIT = strdup(yytext); return NUM_LIT;
+
 \"([^\n\"\\]|\\[^\n])*\"    yylval.STR_LIT = strdup(yytext); return STR_LIT;
 '([^\n'\\]|\\[^\n])+\'      yylval.CHAR_LIT = strdup(yytext); return CHAR_LIT;
 
