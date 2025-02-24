@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include "ast.h"
+#include "lines.h"
 
 extern int yyparse();
 extern FILE *yyin;
@@ -10,11 +11,6 @@ void usage(char *progname) {
     fprintf(stderr, "Usage: %s [INPUT]", progname);
     exit(EXIT_FAILURE);
 }
-
-ast_func *glob_funcs = NULL;
-ast_struct *glob_structs = NULL;
-ast_impl *glob_impls = NULL;
-ast_var *glob_vars = NULL;
 
 #include "print_ast.c"
 
@@ -25,32 +21,39 @@ int main(int argc, char **argv) {
             perror(argv[1]);
             return EXIT_FAILURE;
         }
+        filename = argv[1];
     } else {
         yyin = stdin;
+        filename = "<stdin>";
     }
+
+    next_line();
+
     if(yyparse()) {
         return EXIT_FAILURE;
     }
 
-    ast_func *func = glob_funcs;
+    reverse_lines();
+
+    ast_func *func = prog.funcs;
     while(func) {
         print_func(func);
         printf("\n");
         func = func->next;
     }
-    ast_struct *strct = glob_structs;
+    ast_struct *strct = prog.structs;
     while(strct) {
         print_struct(strct);
         printf("\n");
         strct = strct->next;
     }
-    ast_impl *impl = glob_impls;
+    ast_impl *impl = prog.impls;
     while(impl) {
         print_impl(impl);
         printf("\n");
         impl = impl->next;
     }
-    ast_var *var = glob_vars;
+    ast_var *var = prog.vars;
     while(var) {
         printf("var ");
         print_var(var);

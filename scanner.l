@@ -1,17 +1,13 @@
 %{
 #include "../ast.h"
 #include "parser.h"
+#include "../lines.h"
+#include <string.h>
 #define YY_USER_ACTION \
     yylloc.first_line = yylloc.last_line; \
     yylloc.first_column = yylloc.last_column; \
-    for(int i = 0; yytext[i] != '\0'; i++) { \
-        if(yytext[i] == '\n') { \
-            yylloc.last_line++; \
-            yylloc.last_column = 1; \
-        } else { \
-            yylloc.last_column++; \
-        } \
-    }
+    yylloc.last_column += strlen(yytext); \
+    extend_line(yytext);
 %}
 
 %%
@@ -44,12 +40,18 @@ true                        return TRUE;
 false                       return FALSE;
 null                        return NUL;
 
+ /* reserved keywords */
+pub                         return YYUNDEF;
+const                       return YYUNDEF;
+as                          return YYUNDEF;
+
 [A-Za-z_]([A-Za-z_]|[0-9])* yylval.IDENT = strdup(yytext); return IDENT;
 
 [0-9][0-9_]*([iu](size|8|16|32|64))? yylval.NUM_LIT = strdup(yytext); return NUM_LIT;
 0x[a-fA-F0-9_]*([iu](size|8|16|32|64))? yylval.NUM_LIT = strdup(yytext); return NUM_LIT;
 0o[0-7_]*([iu](size|8|16|32|64))? yylval.NUM_LIT = strdup(yytext); return NUM_LIT;
 0b[01_]*([iu](size|8|16|32|64))? yylval.NUM_LIT = strdup(yytext); return NUM_LIT;
+[0-9]([A-Za-z_]|[0-9])*     return YYUNDEF; /* invalid number literal */
 
 \"([^\n\"\\]|\\[^\n])*\"    yylval.STR_LIT = strdup(yytext); return STR_LIT;
 '([^\n'\\]|\\[^\n])+\'      yylval.CHAR_LIT = strdup(yytext); return CHAR_LIT;
@@ -87,7 +89,8 @@ null                        return NUL;
 "="                         return yytext[0];
 "."                         return yytext[0];
 
-[\n\t ]                     /* whitespace */
+[\t ]                       /* whitespace */
+\n                          yylloc.last_line++; yylloc.last_column = 1; next_line();
 
 .                           return YYUNDEF;
 

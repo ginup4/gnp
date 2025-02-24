@@ -2,69 +2,72 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "../ast.h"
+#include "../error.h"
 extern int yylex();
-void yyerror(char *);
+void yyerror(const char *);
 %}
 
 %locations
 
 %define api.value.type union
 
+%define parse.error detailed
+
 // keywords
-%token FN
-%token LET
-%token STRUCT
-%token IMPL
+%token FN "'fn'"
+%token LET "'let'"
+%token STRUCT "'struct'"
+%token IMPL "'impl'"
 
-%token RETURN
-%token BREAK;
-%token CONTINUE;
-%token IF;
-%token ELIF;
-%token ELSE;
-%token LOOP;
-%token WHILE;
-%token FOR;
+%token RETURN "'return'"
+%token BREAK "'break'"
+%token CONTINUE "'continue'"
+%token IF "'if'"
+%token ELIF "'elif'"
+%token ELSE "'else'"
+%token LOOP "'loop'"
+%token WHILE "'while'"
+%token FOR "'for'"
 
-%token ALLOC;
-%token REALLOC;
-%token FREE;
+%token ALLOC "'alloc'"
+%token REALLOC "'realloc'"
+%token FREE "'free'"
 
-%token PUT;
-%token TAKE;
+%token PUT "'put'"
+%token TAKE "'take'"
 
-%token TRUE
-%token FALSE
-%token NUL
+%token TRUE "'true'"
+%token FALSE "'false'"
+%token NUL "'null'"
 
 // "value" tokens
-%token <char*> IDENT
-%token <char*> NUM_LIT
-%token <char*> STR_LIT
-%token <char*> CHAR_LIT
+%token <char*> IDENT "identifier"
+%token <char*> NUM_LIT "number literal"
+%token <char*> STR_LIT "string literal"
+%token <char*> CHAR_LIT "char literal"
 
 // multichar operator tokens
-%token ADD_ASGN
-%token SUB_ASGN
-%token MUL_ASGN
-%token DIV_ASGN
-%token MOD_ASGN
-%token OR_ASGN
-%token AND_ASGN
-%token XOR_ASGN
+%token ADD_ASGN "+="
+%token SUB_ASGN "-="
+%token MUL_ASGN "*="
+%token DIV_ASGN "/="
+%token MOD_ASGN "%="
+%token OR_ASGN "|="
+%token AND_ASGN "&="
+%token XOR_ASGN "^="
 
-%token COMP_EQ
-%token COMP_NE
-%token COMP_LE
-%token COMP_GE
-%token COMP_LT
-%token COMP_GT
+%token COMP_EQ "=="
+%token COMP_NE "!="
+%token COMP_LE "<="
+%token COMP_GE ">="
+%token COMP_LT "<"
+%token COMP_GT ">"
 
-%token LOG_OR
-%token LOG_AND
+%token LOG_OR "||"
+%token LOG_AND "&&"
 
-%token INC
-%token DEC
+%token INC "++"
+%token DEC "--"
 
 // start symbol
 %start program
@@ -111,10 +114,10 @@ void yyerror(char *);
 
 program:
     %empty
-|   program func_decl { ast_func_append(&glob_funcs, $2); }
-|   program struct_decl { ast_struct_append(&glob_structs, $2); }
-|   program impl_decl { ast_impl_append(&glob_impls, $2); }
-|   program var_decl { ast_var_append(&glob_vars, $2); }
+|   program func_decl { ast_func_append(&prog.funcs, $2); }
+|   program struct_decl { ast_struct_append(&prog.structs, $2); }
+|   program impl_decl { ast_impl_append(&prog.impls, $2); }
+|   program var_decl { ast_var_append(&prog.vars, $2); }
 ;
 
 func_decl:
@@ -269,9 +272,6 @@ expr:
 
 %%
 
-void yyerror(char *msg) {
-    fprintf(stderr, "%d:%d-%d:%d: %s\n",
-            yylloc.first_line, yylloc.first_column,
-            yylloc.last_line, yylloc.last_column,
-            msg);
+void yyerror(const char *msg) {
+    log_error(yylloc.first_line, yylloc.first_column, yylloc.last_column, msg);
 }

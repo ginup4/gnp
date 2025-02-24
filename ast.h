@@ -3,6 +3,13 @@
 
 // typedefs
 
+typedef struct ast_prog {
+    struct ast_func *funcs;
+    struct ast_struct *structs;
+    struct ast_impl *impls;
+    struct ast_var *vars;
+} ast_prog;
+
 typedef struct ast_func {
     char *name;
     struct ast_var *args;
@@ -128,10 +135,7 @@ typedef struct ast_expr {
 
 // globals
 
-extern ast_func *glob_funcs;
-extern ast_struct *glob_structs;
-extern ast_impl *glob_impls;
-extern ast_var *glob_vars;
+extern ast_prog prog;
 
 // functions
 

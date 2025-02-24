@@ -1,6 +1,8 @@
 #include <stdlib.h>
 #include "ast.h"
 
+ast_prog prog = {NULL, NULL, NULL, NULL};
+
 void ast_func_append(ast_func **head, ast_func *func) {
     while(*head) {
         head = &(*head)->next;
