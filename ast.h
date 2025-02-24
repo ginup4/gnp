@@ -52,6 +52,7 @@ typedef enum ast_stmt_vnt {
     AST_STMT_RETURN,
     AST_STMT_BREAK,
     AST_STMT_CONTINUE,
+    AST_STMT_FREE,
     AST_STMT_LOOP,
     AST_STMT_WHILE,
     AST_STMT_IF,
@@ -109,6 +110,12 @@ typedef enum ast_expr_vnt {
     AST_OP_NEG,
     AST_OP_REF,
     AST_OP_DEREF,
+    AST_OP_PUT,
+    AST_OP_TAKE,
+    AST_OP_ALLOC,
+    AST_OP_REALLOC,
+    AST_OP_INC,
+    AST_OP_DEC,
 } ast_expr_vnt;
 
 typedef struct ast_expr {

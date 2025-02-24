@@ -229,6 +229,31 @@ void print_expr(ast_expr *expr) {
         printf("@");
         print_expr(expr->rhs);
         break;
+    case AST_OP_ALLOC:
+        printf("alloc");
+        print_expr(expr->rhs);
+        break;
+    case AST_OP_REALLOC:
+        print_expr(expr->lhs);
+        printf("realloc");
+        print_expr(expr->rhs);
+        break;
+    case AST_OP_PUT:
+        printf("put");
+        print_expr(expr->rhs);
+        break;
+    case AST_OP_TAKE:
+        printf("take");
+        print_expr(expr->rhs);
+        break;
+    case AST_OP_INC:
+        print_expr(expr->lhs);
+        printf("++");
+        break;
+    case AST_OP_DEC:
+        print_expr(expr->lhs);
+        printf("--");
+        break;
     }
     printf(")");
 }
@@ -308,6 +333,11 @@ void print_stmts(ast_stmt *stmt, int tab) {
                 printf("else\n");
                 print_stmts(els->body, tab + 1);
             }
+            break;
+        case AST_STMT_FREE:
+            printf("free ");
+            print_expr(stmt->expr);
+            printf("\n");
             break;
         }
         stmt = stmt->next;

@@ -26,6 +26,13 @@ void yyerror(char *);
 %token WHILE;
 %token FOR;
 
+%token ALLOC;
+%token REALLOC;
+%token FREE;
+
+%token PUT;
+%token TAKE;
+
 %token TRUE
 %token FALSE
 %token NUL
@@ -56,6 +63,9 @@ void yyerror(char *);
 %token LOG_OR
 %token LOG_AND
 
+%token INC
+%token DEC
+
 // start symbol
 %start program
 
@@ -80,6 +90,9 @@ void yyerror(char *);
 %nterm <ast_expr*> expr
 
 // operator precedence
+%nonassoc REALLOC
+%precedence ALLOC
+%precedence PUT TAKE
 %right '=' ADD_ASGN SUB_ASGN MUL_ASGN DIV_ASGN MOD_ASGN OR_ASGN AND_ASGN XOR_ASGN
 %left LOG_OR
 %left LOG_AND
@@ -89,6 +102,7 @@ void yyerror(char *);
 %left '+' '-'
 %left '*' '/' '%'
 %precedence P_NEG
+%precedence INC DEC
 %precedence P_REF
 %left '(' '['
 %left '.'
@@ -160,6 +174,7 @@ stmt:
 |   RETURN expr ';' { $$ = ast_stmt_create(AST_STMT_RETURN, NULL, $2, NULL, NULL); }
 |   BREAK ';' { $$ = ast_stmt_create(AST_STMT_BREAK, NULL, NULL, NULL, NULL); }
 |   CONTINUE ';' { $$ = ast_stmt_create(AST_STMT_CONTINUE, NULL, NULL, NULL, NULL); }
+|   FREE expr ';' { $$ = ast_stmt_create(AST_STMT_FREE, NULL, $2, NULL, NULL); }
 |   loop_stmt { $$ = $1; }
 |   while_stmt { $$ = $1; }
 |   if_stmt { $$ = $1; }
@@ -244,6 +259,12 @@ expr:
 |   '~' expr %prec P_NEG { $$ = ast_expr_make_op(AST_OP_BIT_NOT, NULL, $2); }
 |   '&' expr %prec P_REF { $$ = ast_expr_make_op(AST_OP_REF, NULL, $2); }
 |   '*' expr %prec P_REF { $$ = ast_expr_make_op(AST_OP_DEREF, NULL, $2); }
+|   ALLOC expr { $$ = ast_expr_make_op(AST_OP_ALLOC, NULL, $2); }
+|   expr REALLOC expr { $$ = ast_expr_make_op(AST_OP_REALLOC, $1, $3); }
+|   PUT expr { $$ = ast_expr_make_op(AST_OP_PUT, NULL, $2); }
+|   TAKE expr { $$ = ast_expr_make_op(AST_OP_TAKE, NULL, $2); }
+|   expr INC { $$ = ast_expr_make_op(AST_OP_INC, $1, NULL); }
+|   expr DEC { $$ = ast_expr_make_op(AST_OP_DEC, $1, NULL); }
 ;
 
 %%

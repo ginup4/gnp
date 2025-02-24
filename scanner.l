@@ -33,6 +33,13 @@ loop                        return LOOP;
 while                       return WHILE;
 for                         return FOR;
 
+alloc                       return ALLOC;
+realloc                     return REALLOC;
+free                        return FREE;
+
+put                         return PUT;
+take                        return TAKE;
+
 true                        return TRUE;
 false                       return FALSE;
 null                        return NUL;
@@ -69,6 +76,9 @@ null                        return NUL;
 
 "||"                        return LOG_OR;
 "&&"                        return LOG_AND;
+
+"++"                        return INC;
+"--"                        return DEC;
 
 "("|")"|"{"|"}"|"["|"]"     return yytext[0];
 "!"|"~"                     return yytext[0];
