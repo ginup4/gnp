@@ -3,11 +3,15 @@
 #include "parser.h"
 #include "../lines.h"
 #include <string.h>
+#include <stdlib.h>
+#include <stdio.h>
 #define YY_USER_ACTION \
     yylloc.first_line = yylloc.last_line; \
     yylloc.first_column = yylloc.last_column; \
-    yylloc.last_column += strlen(yytext); \
-    extend_line(yytext);
+    yylloc.last_column += yyleng;
+size_t line_input(char *, size_t);
+#define YY_INPUT(buf, result, max_size) \
+    result = line_input(buf, max_size);
 %}
 
 %%
@@ -90,10 +94,38 @@ as                          return YYUNDEF;
 "."                         return yytext[0];
 
 [\t ]                       /* whitespace */
-\n                          yylloc.last_line++; yylloc.last_column = 1; next_line();
+\n                          yylloc.last_line++; yylloc.last_column = 1;
 
 .                           return YYUNDEF;
 
 %%
 
-int yywrap() {}
+int yywrap() {
+    return 1;
+}
+
+char *line_input_buf = NULL;
+size_t line_input_cap = 0;
+ssize_t line_input_len = 0;
+size_t line_input_loc = 0;
+
+size_t line_input(char *buf, size_t max_size) {
+    if(line_input_loc >= (unsigned) line_input_len) {
+        line_input_len = getline(&line_input_buf, &line_input_cap, yyin);
+        if(line_input_len < 0) {
+            return YY_NULL;
+        }
+        append_line(line_input_buf);
+        line_input_loc = 0;
+    }
+    size_t bytes_avail = line_input_len - line_input_loc;
+    if(bytes_avail > max_size) {
+        memcpy(buf, line_input_buf + line_input_loc, max_size);
+        line_input_loc += max_size;
+        return max_size;
+    } else {
+        memcpy(buf, line_input_buf + line_input_loc, bytes_avail);
+        line_input_loc += bytes_avail;
+        return bytes_avail;
+    }
+}

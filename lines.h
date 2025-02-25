@@ -8,12 +8,10 @@ typedef struct line {
     struct line *next;
 } line;
 
-extern line *lines;
+extern line *first_line;
+extern line *last_line;
 extern char *filename;
-extern bool ended_parsing;
 
-void extend_line(char *);
-void next_line();
-void reverse_lines();
+void append_line(char *);
 
 #endif

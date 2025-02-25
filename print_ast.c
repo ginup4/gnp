@@ -111,7 +111,7 @@ void print_expr(ast_expr *expr) {
         break;
     case AST_OP_MOD_ASGN:
         print_expr(expr->lhs);
-        printf("%=");
+        printf("%%=");
         print_expr(expr->rhs);
         break;
     case AST_OP_OR_ASGN:
@@ -214,7 +214,7 @@ void print_expr(ast_expr *expr) {
         break;
     case AST_OP_MOD:
         print_expr(expr->lhs);
-        printf("%");
+        printf("%%");
         print_expr(expr->rhs);
         break;
     case AST_OP_NEG:
@@ -363,6 +363,7 @@ void print_func(ast_func *func) {
 }
 
 void print_struct(ast_struct *strct) {
+    log_error(strct->loc, "ast error test: struct");
     printf("struct '%s' { ", strct->name);
     ast_var *field = strct->fields;
     while(field) {
@@ -374,6 +375,7 @@ void print_struct(ast_struct *strct) {
 }
 
 void print_impl(ast_impl *impl) {
+    log_error(impl->loc, "ast error test: impl");
     printf("impl '%s' {\n", impl->name);
     ast_func *func = impl->funcs;
     while(func) {

@@ -4,6 +4,8 @@
 #include "ast.h"
 #include "lines.h"
 
+#include "error.h"
+
 extern int yyparse();
 extern FILE *yyin;
 
@@ -27,13 +29,9 @@ int main(int argc, char **argv) {
         filename = "<stdin>";
     }
 
-    next_line();
-
     if(yyparse()) {
         return EXIT_FAILURE;
     }
-
-    reverse_lines();
 
     ast_func *func = prog.funcs;
     while(func) {

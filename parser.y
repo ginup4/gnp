@@ -121,10 +121,10 @@ program:
 ;
 
 func_decl:
-    FN IDENT '(' ')' '{' stmts '}' { $$ = ast_func_create($2, NULL, NULL, $6); }
-|   FN IDENT '(' ')' ':' type '{' stmts '}' { $$ = ast_func_create($2, NULL, $6, $8); }
-|   FN IDENT '(' arg_decls ')' '{' stmts '}' { $$ = ast_func_create($2, $4, NULL, $7); }
-|   FN IDENT '(' arg_decls ')' ':' type '{' stmts '}' { $$ = ast_func_create($2, $4, $7, $9); }
+    FN IDENT '(' ')' '{' stmts '}' { $$ = ast_func_create(@2, $2, NULL, NULL, $6); }
+|   FN IDENT '(' ')' ':' type '{' stmts '}' { $$ = ast_func_create(@2, $2, NULL, $6, $8); }
+|   FN IDENT '(' arg_decls ')' '{' stmts '}' { $$ = ast_func_create(@2, $2, $4, NULL, $7); }
+|   FN IDENT '(' arg_decls ')' ':' type '{' stmts '}' { $$ = ast_func_create(@2, $2, $4, $7, $9); }
 ;
 
 func_decls:
@@ -133,31 +133,31 @@ func_decls:
 ;
 
 struct_decl:
-    STRUCT IDENT '{' arg_decls '}' { $$ = ast_struct_create($2, $4); }
-|   STRUCT IDENT '{' arg_decls ',' '}' { $$ = ast_struct_create($2, $4); }
+    STRUCT IDENT '{' arg_decls '}' { $$ = ast_struct_create(@2, $2, $4); }
+|   STRUCT IDENT '{' arg_decls ',' '}' { $$ = ast_struct_create(@2, $2, $4); }
 ;
 
 impl_decl:
-    IMPL IDENT '{' func_decls '}' { $$ = ast_impl_create($2, $4); }
+    IMPL IDENT '{' func_decls '}' { $$ = ast_impl_create(@2, $2, $4); }
 ;
 
 arg_decls:
-    IDENT ':' type { $$ = ast_var_create($1, $3, NULL); }
-|   arg_decls ',' IDENT ':' type { ast_var_append(&$1->next, ast_var_create($3, $5, NULL)); $$ = $1; }
+    IDENT ':' type { $$ = ast_var_create(@1, $1, $3, NULL); }
+|   arg_decls ',' IDENT ':' type { ast_var_append(&$1->next, ast_var_create(@3, $3, $5, NULL)); $$ = $1; }
 ;
 
 var_decl:
-    LET IDENT ':' type ';' { $$ = ast_var_create($2, $4, NULL); }
-|   LET IDENT ':' type '=' expr ';' { $$ = ast_var_create($2, $4, $6); }
-|   LET IDENT '=' expr ';' { $$ = ast_var_create($2, NULL, $4); }
+    LET IDENT ':' type ';' { $$ = ast_var_create(@2, $2, $4, NULL); }
+|   LET IDENT ':' type '=' expr ';' { $$ = ast_var_create(@2, $2, $4, $6); }
+|   LET IDENT '=' expr ';' { $$ = ast_var_create(@2, $2, NULL, $4); }
 ;
 
 type:
-    IDENT { $$ = ast_type_create($1); }
-|   '(' typeseq ')' { $$ = ast_type_make_tuple($2); }
-|   '&' type { $$ = ast_type_make_ref($2); }
-|   '[' type ';' expr ']' { $$ = ast_type_make_arr($2, $4); }
-|   '[' type ']' { $$ = ast_type_make_slice($2); }
+    IDENT { $$ = ast_type_create(@$, $1); }
+|   '(' typeseq ')' { $$ = ast_type_make_tuple(@$, $2); }
+|   '&' type { $$ = ast_type_make_ref(@$, $2); }
+|   '[' type ';' expr ']' { $$ = ast_type_make_arr(@$, $2, $4); }
+|   '[' type ']' { $$ = ast_type_make_slice(@$, $2); }
 ;
 
 typeseq:
@@ -171,40 +171,40 @@ stmts:
 ;
 
 stmt:
-    var_decl { $$ = ast_stmt_create(AST_STMT_VAR, $1, NULL, NULL, NULL); }
-|   expr ';' { $$ = ast_stmt_create(AST_STMT_EXPR, NULL, $1, NULL, NULL); }
-|   RETURN ';' { $$ = ast_stmt_create(AST_STMT_RETURN, NULL, NULL, NULL, NULL); }
-|   RETURN expr ';' { $$ = ast_stmt_create(AST_STMT_RETURN, NULL, $2, NULL, NULL); }
-|   BREAK ';' { $$ = ast_stmt_create(AST_STMT_BREAK, NULL, NULL, NULL, NULL); }
-|   CONTINUE ';' { $$ = ast_stmt_create(AST_STMT_CONTINUE, NULL, NULL, NULL, NULL); }
-|   FREE expr ';' { $$ = ast_stmt_create(AST_STMT_FREE, NULL, $2, NULL, NULL); }
+    var_decl { $$ = ast_stmt_create(@$, AST_STMT_VAR, $1, NULL, NULL, NULL); }
+|   expr ';' { $$ = ast_stmt_create(@$, AST_STMT_EXPR, NULL, $1, NULL, NULL); }
+|   RETURN ';' { $$ = ast_stmt_create(@$, AST_STMT_RETURN, NULL, NULL, NULL, NULL); }
+|   RETURN expr ';' { $$ = ast_stmt_create(@$, AST_STMT_RETURN, NULL, $2, NULL, NULL); }
+|   BREAK ';' { $$ = ast_stmt_create(@$, AST_STMT_BREAK, NULL, NULL, NULL, NULL); }
+|   CONTINUE ';' { $$ = ast_stmt_create(@$, AST_STMT_CONTINUE, NULL, NULL, NULL, NULL); }
+|   FREE expr ';' { $$ = ast_stmt_create(@$, AST_STMT_FREE, NULL, $2, NULL, NULL); }
 |   loop_stmt { $$ = $1; }
 |   while_stmt { $$ = $1; }
 |   if_stmt { $$ = $1; }
 ;
 
 loop_stmt:
-    LOOP '{' stmts '}' { $$ = ast_stmt_create(AST_STMT_LOOP, NULL, NULL, $3, NULL); }
+    LOOP '{' stmts '}' { $$ = ast_stmt_create(@$, AST_STMT_LOOP, NULL, NULL, $3, NULL); }
 ;
 
 while_stmt:
-    WHILE expr '{' stmts '}' { $$ = ast_stmt_create(AST_STMT_WHILE, NULL, $2, $4, NULL); }
+    WHILE expr '{' stmts '}' { $$ = ast_stmt_create(@$, AST_STMT_WHILE, NULL, $2, $4, NULL); }
 ;
 
 if_stmt:
-    IF expr '{' stmts '}' { $$ = ast_stmt_create(AST_STMT_IF, NULL, $2, $4, NULL); }
-|   IF expr '{' stmts '}' elif_stmt { $$ = ast_stmt_create(AST_STMT_IF, NULL, $2, $4, $6); }
-|   IF expr '{' stmts '}' else_stmt { $$ = ast_stmt_create(AST_STMT_IF, NULL, $2, $4, $6); }
+    IF expr '{' stmts '}' { $$ = ast_stmt_create(@$, AST_STMT_IF, NULL, $2, $4, NULL); }
+|   IF expr '{' stmts '}' elif_stmt { $$ = ast_stmt_create(@$, AST_STMT_IF, NULL, $2, $4, $6); }
+|   IF expr '{' stmts '}' else_stmt { $$ = ast_stmt_create(@$, AST_STMT_IF, NULL, $2, $4, $6); }
 ;
 
 elif_stmt:
-    ELIF expr '{' stmts '}' { $$ = ast_stmt_create(AST_STMT_IF, NULL, $2, $4, NULL); }
-|   ELIF expr '{' stmts '}' elif_stmt { $$ = ast_stmt_create(AST_STMT_IF, NULL, $2, $4, $6); }
-|   ELIF expr '{' stmts '}' else_stmt { $$ = ast_stmt_create(AST_STMT_IF, NULL, $2, $4, $6); }
+    ELIF expr '{' stmts '}' { $$ = ast_stmt_create(@$, AST_STMT_IF, NULL, $2, $4, NULL); }
+|   ELIF expr '{' stmts '}' elif_stmt { $$ = ast_stmt_create(@$, AST_STMT_IF, NULL, $2, $4, $6); }
+|   ELIF expr '{' stmts '}' else_stmt { $$ = ast_stmt_create(@$, AST_STMT_IF, NULL, $2, $4, $6); }
 ;
 
 else_stmt:
-    ELSE '{' stmts '}' { $$ = ast_stmt_create(AST_STMT_ELSE, NULL, NULL, $3, NULL); }
+    ELSE '{' stmts '}' { $$ = ast_stmt_create(@$, AST_STMT_ELSE, NULL, NULL, $3, NULL); }
 ;
 
 callargs:
@@ -218,60 +218,60 @@ exprseq:
 ;
 
 expr:
-    IDENT { $$ = ast_expr_create(AST_EXPR_IDENT, $1); }
-|   NUM_LIT { $$ = ast_expr_create(AST_EXPR_NUM_LIT, $1); }
-|   STR_LIT { $$ = ast_expr_create(AST_EXPR_STR_LIT, $1); }
-|   CHAR_LIT { $$ = ast_expr_create(AST_EXPR_CHAR_LIT, $1); }
-|   TRUE { $$ = ast_expr_create(AST_EXPR_TRUE, NULL); }
-|   FALSE { $$ = ast_expr_create(AST_EXPR_FALSE, NULL); }
-|   NUL { $$ = ast_expr_create(AST_EXPR_NULL, NULL); }
+    IDENT { $$ = ast_expr_create(@$, AST_EXPR_IDENT, $1); }
+|   NUM_LIT { $$ = ast_expr_create(@$, AST_EXPR_NUM_LIT, $1); }
+|   STR_LIT { $$ = ast_expr_create(@$, AST_EXPR_STR_LIT, $1); }
+|   CHAR_LIT { $$ = ast_expr_create(@$, AST_EXPR_CHAR_LIT, $1); }
+|   TRUE { $$ = ast_expr_create(@$, AST_EXPR_TRUE, NULL); }
+|   FALSE { $$ = ast_expr_create(@$, AST_EXPR_FALSE, NULL); }
+|   NUL { $$ = ast_expr_create(@$, AST_EXPR_NULL, NULL); }
 |   '(' expr ')' { $$ = $2; }
-|   '(' exprseq ')' { $$ = ast_expr_make_tuple($2); }
-|   expr '(' ')' { $$ = ast_expr_make_op(AST_OP_CALL, $1, NULL); }
-|   expr '(' callargs ')' { $$ = ast_expr_make_op(AST_OP_CALL, $1, $3); }
-|   expr '[' expr ']' { $$ = ast_expr_make_op(AST_OP_INDEX, $1, $3); }
-|   expr '.' IDENT { $$ = ast_expr_make_dot($1, $3); }
-|   expr '.' NUM_LIT { $$ = ast_expr_make_dot($1, $3); }
-|   expr '=' expr { $$ = ast_expr_make_op(AST_OP_ASGN, $1, $3); }
-|   expr ADD_ASGN expr { $$ = ast_expr_make_op(AST_OP_ADD_ASGN, $1, $3); }
-|   expr SUB_ASGN expr { $$ = ast_expr_make_op(AST_OP_SUB_ASGN, $1, $3); }
-|   expr MUL_ASGN expr { $$ = ast_expr_make_op(AST_OP_MUL_ASGN, $1, $3); }
-|   expr DIV_ASGN expr { $$ = ast_expr_make_op(AST_OP_DIV_ASGN, $1, $3); }
-|   expr MOD_ASGN expr { $$ = ast_expr_make_op(AST_OP_MOD_ASGN, $1, $3); }
-|   expr OR_ASGN expr { $$ = ast_expr_make_op(AST_OP_OR_ASGN, $1, $3); }
-|   expr AND_ASGN expr { $$ = ast_expr_make_op(AST_OP_AND_ASGN, $1, $3); }
-|   expr XOR_ASGN expr { $$ = ast_expr_make_op(AST_OP_XOR_ASGN, $1, $3); }
-|   expr COMP_EQ expr { $$ = ast_expr_make_op(AST_OP_COMP_EQ, $1, $3); }
-|   expr COMP_NE expr { $$ = ast_expr_make_op(AST_OP_COMP_NE, $1, $3); }
-|   expr COMP_LE expr { $$ = ast_expr_make_op(AST_OP_COMP_LE, $1, $3); }
-|   expr COMP_GE expr { $$ = ast_expr_make_op(AST_OP_COMP_GE, $1, $3); }
-|   expr COMP_LT expr { $$ = ast_expr_make_op(AST_OP_COMP_LT, $1, $3); }
-|   expr COMP_GT expr { $$ = ast_expr_make_op(AST_OP_COMP_GT, $1, $3); }
-|   expr LOG_OR expr { $$ = ast_expr_make_op(AST_OP_LOG_OR, $1, $3); }
-|   expr LOG_AND expr { $$ = ast_expr_make_op(AST_OP_LOG_AND, $1, $3); }
-|   expr '+' expr { $$ = ast_expr_make_op(AST_OP_ADD, $1, $3); }
-|   expr '-' expr { $$ = ast_expr_make_op(AST_OP_SUB, $1, $3); }
-|   expr '*' expr { $$ = ast_expr_make_op(AST_OP_MUL, $1, $3); }
-|   expr '/' expr { $$ = ast_expr_make_op(AST_OP_DIV, $1, $3); }
-|   expr '%' expr { $$ = ast_expr_make_op(AST_OP_MOD, $1, $3); }
-|   expr '|' expr { $$ = ast_expr_make_op(AST_OP_BIT_OR, $1, $3); }
-|   expr '&' expr { $$ = ast_expr_make_op(AST_OP_BIT_AND, $1, $3); }
-|   expr '^' expr { $$ = ast_expr_make_op(AST_OP_BIT_XOR, $1, $3); }
-|   '-' expr %prec P_NEG { $$ = ast_expr_make_op(AST_OP_NEG, NULL, $2); }
-|   '!' expr %prec P_NEG { $$ = ast_expr_make_op(AST_OP_LOG_NOT, NULL, $2); }
-|   '~' expr %prec P_NEG { $$ = ast_expr_make_op(AST_OP_BIT_NOT, NULL, $2); }
-|   '&' expr %prec P_REF { $$ = ast_expr_make_op(AST_OP_REF, NULL, $2); }
-|   '*' expr %prec P_REF { $$ = ast_expr_make_op(AST_OP_DEREF, NULL, $2); }
-|   ALLOC expr { $$ = ast_expr_make_op(AST_OP_ALLOC, NULL, $2); }
-|   expr REALLOC expr { $$ = ast_expr_make_op(AST_OP_REALLOC, $1, $3); }
-|   PUT expr { $$ = ast_expr_make_op(AST_OP_PUT, NULL, $2); }
-|   TAKE expr { $$ = ast_expr_make_op(AST_OP_TAKE, NULL, $2); }
-|   expr INC { $$ = ast_expr_make_op(AST_OP_INC, $1, NULL); }
-|   expr DEC { $$ = ast_expr_make_op(AST_OP_DEC, $1, NULL); }
+|   '(' exprseq ')' { $$ = ast_expr_make_tuple(@$, $2); }
+|   expr '(' ')' { $$ = ast_expr_make_op(@$, AST_OP_CALL, $1, NULL); }
+|   expr '(' callargs ')' { $$ = ast_expr_make_op(@$, AST_OP_CALL, $1, $3); }
+|   expr '[' expr ']' { $$ = ast_expr_make_op(@$, AST_OP_INDEX, $1, $3); }
+|   expr '.' IDENT { $$ = ast_expr_make_dot(@$, $1, $3); }
+|   expr '.' NUM_LIT { $$ = ast_expr_make_dot(@$, $1, $3); }
+|   expr '=' expr { $$ = ast_expr_make_op(@$, AST_OP_ASGN, $1, $3); }
+|   expr ADD_ASGN expr { $$ = ast_expr_make_op(@$, AST_OP_ADD_ASGN, $1, $3); }
+|   expr SUB_ASGN expr { $$ = ast_expr_make_op(@$, AST_OP_SUB_ASGN, $1, $3); }
+|   expr MUL_ASGN expr { $$ = ast_expr_make_op(@$, AST_OP_MUL_ASGN, $1, $3); }
+|   expr DIV_ASGN expr { $$ = ast_expr_make_op(@$, AST_OP_DIV_ASGN, $1, $3); }
+|   expr MOD_ASGN expr { $$ = ast_expr_make_op(@$, AST_OP_MOD_ASGN, $1, $3); }
+|   expr OR_ASGN expr { $$ = ast_expr_make_op(@$, AST_OP_OR_ASGN, $1, $3); }
+|   expr AND_ASGN expr { $$ = ast_expr_make_op(@$, AST_OP_AND_ASGN, $1, $3); }
+|   expr XOR_ASGN expr { $$ = ast_expr_make_op(@$, AST_OP_XOR_ASGN, $1, $3); }
+|   expr COMP_EQ expr { $$ = ast_expr_make_op(@$, AST_OP_COMP_EQ, $1, $3); }
+|   expr COMP_NE expr { $$ = ast_expr_make_op(@$, AST_OP_COMP_NE, $1, $3); }
+|   expr COMP_LE expr { $$ = ast_expr_make_op(@$, AST_OP_COMP_LE, $1, $3); }
+|   expr COMP_GE expr { $$ = ast_expr_make_op(@$, AST_OP_COMP_GE, $1, $3); }
+|   expr COMP_LT expr { $$ = ast_expr_make_op(@$, AST_OP_COMP_LT, $1, $3); }
+|   expr COMP_GT expr { $$ = ast_expr_make_op(@$, AST_OP_COMP_GT, $1, $3); }
+|   expr LOG_OR expr { $$ = ast_expr_make_op(@$, AST_OP_LOG_OR, $1, $3); }
+|   expr LOG_AND expr { $$ = ast_expr_make_op(@$, AST_OP_LOG_AND, $1, $3); }
+|   expr '+' expr { $$ = ast_expr_make_op(@$, AST_OP_ADD, $1, $3); }
+|   expr '-' expr { $$ = ast_expr_make_op(@$, AST_OP_SUB, $1, $3); }
+|   expr '*' expr { $$ = ast_expr_make_op(@$, AST_OP_MUL, $1, $3); }
+|   expr '/' expr { $$ = ast_expr_make_op(@$, AST_OP_DIV, $1, $3); }
+|   expr '%' expr { $$ = ast_expr_make_op(@$, AST_OP_MOD, $1, $3); }
+|   expr '|' expr { $$ = ast_expr_make_op(@$, AST_OP_BIT_OR, $1, $3); }
+|   expr '&' expr { $$ = ast_expr_make_op(@$, AST_OP_BIT_AND, $1, $3); }
+|   expr '^' expr { $$ = ast_expr_make_op(@$, AST_OP_BIT_XOR, $1, $3); }
+|   '-' expr %prec P_NEG { $$ = ast_expr_make_op(@$, AST_OP_NEG, NULL, $2); }
+|   '!' expr %prec P_NEG { $$ = ast_expr_make_op(@$, AST_OP_LOG_NOT, NULL, $2); }
+|   '~' expr %prec P_NEG { $$ = ast_expr_make_op(@$, AST_OP_BIT_NOT, NULL, $2); }
+|   '&' expr %prec P_REF { $$ = ast_expr_make_op(@$, AST_OP_REF, NULL, $2); }
+|   '*' expr %prec P_REF { $$ = ast_expr_make_op(@$, AST_OP_DEREF, NULL, $2); }
+|   ALLOC expr { $$ = ast_expr_make_op(@$, AST_OP_ALLOC, NULL, $2); }
+|   expr REALLOC expr { $$ = ast_expr_make_op(@$, AST_OP_REALLOC, $1, $3); }
+|   PUT expr { $$ = ast_expr_make_op(@$, AST_OP_PUT, NULL, $2); }
+|   TAKE expr { $$ = ast_expr_make_op(@$, AST_OP_TAKE, NULL, $2); }
+|   expr INC { $$ = ast_expr_make_op(@$, AST_OP_INC, $1, NULL); }
+|   expr DEC { $$ = ast_expr_make_op(@$, AST_OP_DEC, $1, NULL); }
 ;
 
 %%
 
 void yyerror(const char *msg) {
-    log_error(yylloc.first_line, yylloc.first_column, yylloc.last_column, msg);
+    log_error(yylloc, msg);
 }
