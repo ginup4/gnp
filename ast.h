@@ -19,6 +19,7 @@ typedef struct ast_prog {
     struct ast_struct *structs;
     struct ast_impl *impls;
     struct ast_var *vars;
+    struct ast_symbol *symbols;
 } ast_prog;
 
 typedef struct ast_func {
@@ -34,6 +35,7 @@ typedef struct ast_struct {
     YYLTYPE loc;
     char *name;
     struct ast_var *fields;
+    struct ast_func *funcs; // new
     struct ast_struct *next;
 } ast_struct;
 
@@ -151,9 +153,27 @@ typedef struct ast_expr {
     struct ast_expr *next;
 } ast_expr;
 
+typedef enum ast_symbol_vnt {
+    AST_SYMBOL_FUNC,
+    AST_SYMBOL_STRUCT,
+    AST_SYMBOL_VAR,
+} ast_symbol_vnt;
+
+typedef struct ast_symbol {
+    YYLTYPE loc;
+    char *name;
+    enum ast_symbol_vnt vnt;
+    union {
+        ast_func *func;
+        ast_struct *strct;
+        ast_var *var;
+    } pointed;
+    struct ast_symbol *next;
+} ast_symbol;
+
 // globals
 
-extern ast_prog prog;
+extern ast_prog glob_program;
 
 // functions
 

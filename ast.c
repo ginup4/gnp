@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include "ast.h"
 
-ast_prog prog = {NULL, NULL, NULL, NULL};
+ast_prog glob_program = {NULL, NULL, NULL, NULL, NULL};
 
 void ast_func_append(ast_func **head, ast_func *func) {
     while(*head) {
@@ -33,6 +33,7 @@ ast_struct *ast_struct_create(YYLTYPE loc, char *name, ast_var *fields) {
     ret->loc = loc;
     ret->name = name;
     ret->fields = fields;
+    ret->funcs = NULL;
     ret->next = NULL;
     return ret;
 }

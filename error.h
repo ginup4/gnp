@@ -6,6 +6,8 @@
 extern int errors;
 extern int warnings;
 
-void log_error(YYLTYPE, const char *);
+void log_error(const char *, YYLTYPE loc);
+void log_warning(const char *, YYLTYPE loc);
+void log_note(const char *, YYLTYPE loc);
 
 #endif

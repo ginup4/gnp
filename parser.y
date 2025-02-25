@@ -93,7 +93,7 @@ void yyerror(const char *);
 %nterm <ast_expr*> expr
 
 // operator precedence
-%nonassoc REALLOC
+%left REALLOC
 %precedence ALLOC
 %precedence PUT TAKE
 %right '=' ADD_ASGN SUB_ASGN MUL_ASGN DIV_ASGN MOD_ASGN OR_ASGN AND_ASGN XOR_ASGN
@@ -114,10 +114,10 @@ void yyerror(const char *);
 
 program:
     %empty
-|   program func_decl { ast_func_append(&prog.funcs, $2); }
-|   program struct_decl { ast_struct_append(&prog.structs, $2); }
-|   program impl_decl { ast_impl_append(&prog.impls, $2); }
-|   program var_decl { ast_var_append(&prog.vars, $2); }
+|   program func_decl { ast_func_append(&glob_program.funcs, $2); }
+|   program struct_decl { ast_struct_append(&glob_program.structs, $2); }
+|   program impl_decl { ast_impl_append(&glob_program.impls, $2); }
+|   program var_decl { ast_var_append(&glob_program.vars, $2); }
 ;
 
 func_decl:
@@ -273,5 +273,5 @@ expr:
 %%
 
 void yyerror(const char *msg) {
-    log_error(yylloc, msg);
+    log_error(msg, yylloc);
 }

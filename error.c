@@ -1,27 +1,30 @@
 #include <stdio.h>
+#include <string.h>
 #include "ast.h"
 #include "lines.h"
 
 int errors = 0;
 int warnings = 0;
 
-void log_error(YYLTYPE loc, const char *msg) {
+void log_location(YYLTYPE loc) {
     int fline = loc.first_line;
     int fcol = loc.first_column;
     int lline = loc.last_line;
     int lcol = loc.last_column;
-    errors++;
     line *curr_line = first_line;
     int curr_line_ind = 1;
     if(fline == lline) {
-        fprintf(stderr, "\e[31m%s %d:%d-%d : %s\e[m\n", filename, fline, fcol, lcol - 1, msg);
+        fprintf(stderr, "%s: %d:%d-%d\n", filename, fline, fcol, lcol - 1);
         while(curr_line_ind < fline && curr_line) {
             curr_line = curr_line->next;
             curr_line_ind++;
         }
-        if(curr_line) {
-            fprintf(stderr, "|   %s", curr_line->str);
-            fprintf(stderr, "|   ");
+        if(curr_line && curr_line->str && curr_line->str[0] != '\0') {
+            fprintf(stderr, "| %s", curr_line->str);
+            if(curr_line->str[strlen(curr_line->str) - 1] != '\n') {
+                fprintf(stderr, "\n");
+            }
+            fprintf(stderr, "| ");
             int i;
             for(i = 1; i < fcol; i++) {
                 fprintf(stderr, " ");
@@ -33,6 +36,23 @@ void log_error(YYLTYPE loc, const char *msg) {
             fprintf(stderr, "\e[m\n");
         }
     } else {
-        fprintf(stderr, "\e[31m%s %d:%d-%d:%d : %s\e[m\n", filename, fline, fcol, lline, lcol - 1, msg);
+        fprintf(stderr, "%s: %d:%d-%d:%d\n", filename, fline, fcol, lline, lcol - 1);
     }
+}
+
+void log_error(const char *msg, YYLTYPE loc) {
+    fprintf(stderr, "\e[31mError: %s\e[m\n", msg);
+    errors++;
+    log_location(loc);
+}
+
+void log_warning(const char *msg, YYLTYPE loc) {
+    fprintf(stderr, "\e[33mWarning: %s\e[m\n", msg);
+    warnings++;
+    log_location(loc);
+}
+
+void log_note(const char *msg, YYLTYPE loc) {
+    fprintf(stderr, "\e[32mNote: %s\e[m\n", msg);
+    log_location(loc);
 }

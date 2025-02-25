@@ -56,6 +56,7 @@ void print_expr(ast_expr *expr) {
         printf("null");
         break;
     case AST_EXPR_TUPLE:
+        log_error(expr->loc, "ast error test: tuple");
         subexpr = expr->rhs;
         while(subexpr) {
             print_expr(subexpr);
