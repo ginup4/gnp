@@ -204,7 +204,7 @@ elif_stmt:
 ;
 
 else_stmt:
-    ELSE '{' stmts '}' { $$ = ast_stmt_create(@$, AST_STMT_ELSE, NULL, NULL, $3, NULL); }
+    ELSE '{' stmts '}' { $$ = ast_stmt_create(@$, AST_STMT_IF, NULL, NULL, $3, NULL); }
 ;
 
 callargs:

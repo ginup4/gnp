@@ -35,16 +35,16 @@ void print_expr(ast_expr *expr) {
     ast_expr *subexpr;
     switch(expr->vnt) {
     case AST_EXPR_IDENT:
-        printf("%s", expr->data);
+        printf("%s", expr->pointed.data);
         break;
     case AST_EXPR_NUM_LIT:
-        printf("%s", expr->data);
+        printf("%s", expr->pointed.data);
         break;
     case AST_EXPR_STR_LIT:
-        printf("%s", expr->data);
+        printf("%s", expr->pointed.data);
         break;
     case AST_EXPR_CHAR_LIT:
-        printf("%s", expr->data);
+        printf("%s", expr->pointed.data);
         break;
     case AST_EXPR_TRUE:
         printf("true");
@@ -56,7 +56,6 @@ void print_expr(ast_expr *expr) {
         printf("null");
         break;
     case AST_EXPR_TUPLE:
-        log_error(expr->loc, "ast error test: tuple");
         subexpr = expr->rhs;
         while(subexpr) {
             print_expr(subexpr);
@@ -66,7 +65,7 @@ void print_expr(ast_expr *expr) {
         break;
     case AST_EXPR_DOT:
         print_expr(expr->lhs);
-        printf(".%s", expr->data);
+        printf(".%s", expr->pointed.data);
         break;
     case AST_OP_CALL:
         print_expr(expr->lhs);
@@ -317,7 +316,7 @@ void print_stmts(ast_stmt *stmt, int tab) {
             printf("\n");
             print_stmts(stmt->body, tab + 1);
             els = stmt->els;
-            while(els && els->vnt == AST_STMT_IF) {
+            while(els && els->expr) {
                 for(i = 0; i < tab; i++) {
                     printf("  ");
                 }
@@ -364,7 +363,6 @@ void print_func(ast_func *func) {
 }
 
 void print_struct(ast_struct *strct) {
-    log_error(strct->loc, "ast error test: struct");
     printf("struct '%s' { ", strct->name);
     ast_var *field = strct->fields;
     while(field) {
@@ -376,7 +374,6 @@ void print_struct(ast_struct *strct) {
 }
 
 void print_impl(ast_impl *impl) {
-    log_error(impl->loc, "ast error test: impl");
     printf("impl '%s' {\n", impl->name);
     ast_func *func = impl->funcs;
     while(func) {

@@ -1,4 +1,4 @@
-cflags := -Wall -Wextra
+cflags := -Wall -Wextra -Wno-unused-parameter
 ldflags :=
 
 gnpc: build/scanner.o build/parser.o build/main.o build/ast.o build/lines.o build/error.o build/analyzer.o

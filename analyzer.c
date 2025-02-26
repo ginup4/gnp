@@ -1,62 +1,41 @@
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 #include "analyzer.h"
 #include "ast.h"
 #include "error.h"
 
+// temp
 #include <stdio.h>
 
 void generate_symbols(ast_prog *prog) {
-    ast_symbol *new_symbol;
-    ast_symbol **last_symbol = &prog->symbols;
+    ast_symbol *old_symbol;
     ast_struct *strct = prog->structs;
     while(strct) {
-        new_symbol = malloc(sizeof(ast_symbol));
-        new_symbol->loc = strct->loc;
-        new_symbol->name = strdup(strct->name);
-        new_symbol->vnt = AST_SYMBOL_STRUCT;
-        new_symbol->pointed.strct = strct;
-        new_symbol->next = NULL;
-        *last_symbol = new_symbol;
-        last_symbol = &new_symbol->next;
+        old_symbol = ast_symbol_push(prog, strct->loc, strct->name, AST_SYMBOL_STRUCT, strct, 0);
+        if(old_symbol) {
+            log_error("symbol already defined", strct->loc);
+            log_note("here", old_symbol->loc);
+        }
         strct = strct->next;
     }
     ast_func *func = prog->funcs;
     while(func) {
-        new_symbol = malloc(sizeof(ast_symbol));
-        new_symbol->loc = func->loc;
-        new_symbol->name = strdup(func->name);
-        new_symbol->vnt = AST_SYMBOL_FUNC;
-        new_symbol->pointed.func = func;
-        new_symbol->next = NULL;
-        *last_symbol = new_symbol;
-        last_symbol = &new_symbol->next;
+        old_symbol = ast_symbol_push(prog, func->loc, func->name, AST_SYMBOL_FUNC, func, 0);
+        if(old_symbol) {
+            log_error("symbol already defined", func->loc);
+            log_note("here", old_symbol->loc);
+        }
         func = func->next;
     }
     ast_var *var = prog->vars;
     while(var) {
-        new_symbol = malloc(sizeof(ast_symbol));
-        new_symbol->loc = var->loc;
-        new_symbol->name = strdup(var->name);
-        new_symbol->vnt = AST_SYMBOL_VAR;
-        new_symbol->pointed.var = var;
-        new_symbol->next = NULL;
-        *last_symbol = new_symbol;
-        last_symbol = &new_symbol->next;
-        var = var->next;
-    }
-    ast_symbol *symbol1 = prog->symbols;
-    ast_symbol *symbol2;
-    while(symbol1) {
-        symbol2 = symbol1->next;
-        while(symbol2) {
-            if(strcmp(symbol1->name, symbol2->name) == 0) {
-                log_error("symbol already defined", symbol2->loc);
-                log_note("here", symbol1->loc);
-            }
-            symbol2 = symbol2->next;
+        old_symbol = ast_symbol_push(prog, var->loc, var->name, AST_SYMBOL_VAR, var, 0);
+        if(old_symbol) {
+            log_error("symbol already defined", var->loc);
+            log_note("here", old_symbol->loc);
         }
-        symbol1 = symbol1->next;
+        var = var->next;
     }
 }
 
@@ -123,10 +102,104 @@ void deduplicate_struct_fields(ast_prog *prog) {
     }
 }
 
+void resolve_symbols_expr(ast_prog *prog, ast_expr *expr) {
+    // pass
+}
+
+void resolve_symbols_stmts(ast_prog *prog, ast_stmt *stmt, int scope) {
+    printf("resolving symbols for stmts scope: %d\n", scope); // temp
+    ast_stmt *els;
+    ast_symbol *old_symbol;
+    while(stmt) {
+        switch(stmt->vnt) {
+        case AST_STMT_BREAK:
+        case AST_STMT_CONTINUE:
+            break;
+        case AST_STMT_VAR:
+        case AST_STMT_RETURN:
+            if(stmt->expr) {
+                resolve_symbols_expr(prog, stmt->expr);
+            }
+            break;
+        case AST_STMT_EXPR:
+        case AST_STMT_FREE:
+            resolve_symbols_expr(prog, stmt->expr);
+            break;
+        case AST_STMT_LOOP:
+            resolve_symbols_stmts(prog, stmt->body, scope + 1);
+            break;
+        case AST_STMT_WHILE:
+            resolve_symbols_expr(prog, stmt->expr);
+            resolve_symbols_stmts(prog, stmt->body, scope + 1);
+            break;
+        case AST_STMT_IF:
+            resolve_symbols_expr(prog, stmt->expr);
+            resolve_symbols_stmts(prog, stmt->body, scope + 1);
+            els = stmt->els;
+            while(els && els->expr) {
+                resolve_symbols_expr(prog, els->expr);
+                resolve_symbols_stmts(prog, els->body, scope + 1);
+                els = els->els;
+            }
+            if(els) {
+                resolve_symbols_stmts(prog, els->body, scope + 1);
+            }
+            break;
+        }
+        if(stmt->vnt == AST_STMT_VAR) {
+            old_symbol = ast_symbol_push(prog, stmt->var->loc, stmt->var->name, AST_SYMBOL_VAR, stmt->var, scope);
+            if(old_symbol) {
+                log_error("variable already defined", stmt->var->loc);
+                log_note("here", old_symbol->loc);
+            }
+        }
+        stmt = stmt->next;
+    }
+    ast_symbol_pop(prog, scope);
+}
+
+void resolve_symbols_func(ast_prog *prog, ast_func *func) {
+    printf("resolving symbols for func: %s\n", func->name); // temp
+    ast_symbol *old_symbol;
+    ast_var *arg = func->args;
+    while(arg) {
+        old_symbol = ast_symbol_push(prog, arg->loc, arg->name, AST_SYMBOL_VAR, arg, 2);
+        if(old_symbol) {
+            log_error("argument already defined", arg->loc);
+            log_note("here", old_symbol->loc);
+        }
+        arg = arg->next;
+    }
+    resolve_symbols_stmts(prog, func->body, 2);
+}
+
+void resolve_symbols(ast_prog *prog) {
+    ast_struct *strct = prog->structs;
+    ast_func *func;
+    while(strct) {
+        ast_symbol_push(prog, strct->loc, "Self", AST_SYMBOL_STRUCT, strct, 1);
+        func = strct->funcs;
+        while(func) {
+            resolve_symbols_func(prog, func);
+            func = func->next;
+        }
+        ast_symbol_pop(prog, 1);
+        strct = strct->next;
+    }
+    func = prog->funcs;
+    while(func) {
+        resolve_symbols_func(prog, func);
+        func = func->next;
+    }
+}
+
 void analyze_ast(ast_prog *prog) {
     generate_symbols(prog);
     if(errors) return;
     attach_impls(prog);
     deduplicate_struct_fields(prog);
+    if(errors) return;
+    resolve_symbols(prog);
+    ast_symbol_pop(prog, 0);
     if(errors) return;
 }

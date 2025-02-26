@@ -1,5 +1,9 @@
 #include <stdlib.h>
+#include <string.h>
 #include "ast.h"
+
+//temp
+#include <stdio.h>
 
 ast_prog glob_program = {NULL, NULL, NULL, NULL, NULL};
 
@@ -154,7 +158,7 @@ ast_expr *ast_expr_create(YYLTYPE loc, ast_expr_vnt vnt, char *data) {
     ast_expr *ret = malloc(sizeof(ast_expr));
     ret->loc = loc;
     ret->vnt = vnt;
-    ret->data = data;
+    ret->pointed.data = data;
     ret->next = NULL;
     return ret;
 }
@@ -173,7 +177,7 @@ ast_expr *ast_expr_make_dot(YYLTYPE loc, ast_expr *expr, char *data) {
     ret->loc = loc;
     ret->vnt = AST_EXPR_DOT;
     ret->lhs = expr;
-    ret->data = data;
+    ret->pointed.data = data;
     ret->next = NULL;
     return ret;
 }
@@ -186,4 +190,51 @@ ast_expr *ast_expr_make_op(YYLTYPE loc, ast_expr_vnt vnt, ast_expr *lhs, ast_exp
     ret->rhs = rhs;
     ret->next = NULL;
     return ret;
+}
+
+ast_symbol *ast_symbol_push(ast_prog *prog, YYLTYPE loc, char *name, ast_symbol_vnt vnt, void *pointed, int scope) {
+    ast_symbol *symbol = prog->symbols;
+    while(symbol) {
+        if(symbol->scope < scope) {
+            break;
+        }
+        if(strcmp(symbol->name, name) == 0) {
+            return symbol;
+        }
+        symbol = symbol->next;
+    }
+    printf("pushing symbol: %s\n", name); // temp
+    symbol = malloc(sizeof(ast_symbol));
+    symbol->loc = loc;
+    symbol->name = strdup(name);
+    symbol->vnt = vnt;
+    switch(vnt) {
+    case AST_SYMBOL_STRUCT:
+        symbol->pointed.strct = pointed;
+        break;
+    case AST_SYMBOL_FUNC:
+        symbol->pointed.func = pointed;
+        break;
+    case AST_SYMBOL_VAR:
+        symbol->pointed.var = pointed;
+        break;
+    }
+    symbol->scope = scope;
+    symbol->next = prog->symbols;
+    prog->symbols = symbol;
+    return NULL;
+}
+
+void ast_symbol_pop(ast_prog *prog, int scope) {
+    ast_symbol *symbol;
+    while(prog->symbols) {
+        if(prog->symbols->scope < scope) {
+            break;
+        }
+        symbol = prog->symbols;
+        prog->symbols = symbol->next;
+        printf("popping symbol: %s\n", symbol->name); // temp
+        free(symbol->name);
+        free(symbol);
+    }
 }

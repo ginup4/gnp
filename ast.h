@@ -35,7 +35,7 @@ typedef struct ast_struct {
     YYLTYPE loc;
     char *name;
     struct ast_var *fields;
-    struct ast_func *funcs; // new
+    struct ast_func *funcs;
     struct ast_struct *next;
 } ast_struct;
 
@@ -81,7 +81,6 @@ typedef enum ast_stmt_vnt {
     AST_STMT_LOOP,
     AST_STMT_WHILE,
     AST_STMT_IF,
-    AST_STMT_ELSE,
 } ast_stmt_vnt;
 
 typedef struct ast_stmt {
@@ -93,6 +92,25 @@ typedef struct ast_stmt {
     struct ast_stmt *els;
     struct ast_stmt *next;
 } ast_stmt;
+
+typedef enum ast_symbol_vnt {
+    AST_SYMBOL_FUNC,
+    AST_SYMBOL_STRUCT,
+    AST_SYMBOL_VAR,
+} ast_symbol_vnt;
+
+typedef struct ast_symbol {
+    YYLTYPE loc;
+    char *name;
+    enum ast_symbol_vnt vnt;
+    int scope;
+    union {
+        struct ast_func *func;
+        struct ast_struct *strct;
+        struct ast_var *var;
+    } pointed;
+    struct ast_symbol *next;
+} ast_symbol;
 
 typedef enum ast_expr_vnt {
     AST_EXPR_IDENT,
@@ -147,29 +165,17 @@ typedef enum ast_expr_vnt {
 typedef struct ast_expr {
     YYLTYPE loc;
     enum ast_expr_vnt vnt;
-    char *data;
-    struct ast_expr *lhs;
-    struct ast_expr *rhs;
-    struct ast_expr *next;
-} ast_expr;
-
-typedef enum ast_symbol_vnt {
-    AST_SYMBOL_FUNC,
-    AST_SYMBOL_STRUCT,
-    AST_SYMBOL_VAR,
-} ast_symbol_vnt;
-
-typedef struct ast_symbol {
-    YYLTYPE loc;
-    char *name;
-    enum ast_symbol_vnt vnt;
+    enum ast_symbol_vnt pointed_vnt;
     union {
+        char *data;
         ast_func *func;
         ast_struct *strct;
         ast_var *var;
     } pointed;
-    struct ast_symbol *next;
-} ast_symbol;
+    struct ast_expr *lhs;
+    struct ast_expr *rhs;
+    struct ast_expr *next;
+} ast_expr;
 
 // globals
 
@@ -204,5 +210,8 @@ ast_expr *ast_expr_create(YYLTYPE, ast_expr_vnt, char *);
 ast_expr *ast_expr_make_tuple(YYLTYPE, ast_expr *);
 ast_expr *ast_expr_make_dot(YYLTYPE, ast_expr *, char *);
 ast_expr *ast_expr_make_op(YYLTYPE, ast_expr_vnt, ast_expr *, ast_expr *);
+
+ast_symbol *ast_symbol_push(ast_prog *, YYLTYPE, char *, ast_symbol_vnt, void *, int);
+void ast_symbol_pop(ast_prog *, int);
 
 #endif
