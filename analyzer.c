@@ -5,9 +5,6 @@
 #include "ast.h"
 #include "error.h"
 
-// temp
-#include <stdio.h>
-
 void generate_symbols(ast_prog *prog) {
     ast_symbol *old_symbol;
     ast_struct *strct = prog->structs;
@@ -103,11 +100,81 @@ void deduplicate_struct_fields(ast_prog *prog) {
 }
 
 void resolve_symbols_expr(ast_prog *prog, ast_expr *expr) {
-    // pass
+    ast_expr *subexpr;
+    ast_symbol *symbol;
+    switch(expr->vnt) {
+    case AST_EXPR_IDENT:
+        symbol = ast_symbol_find(prog, expr->pointed.data);
+        if(symbol) {
+            switch(symbol->vnt) {
+            case AST_SYMBOL_FUNC:
+                expr->pointed_vnt = AST_SYMBOL_FUNC;
+                expr->pointed.func = symbol->pointed.func;
+                break;
+            case AST_SYMBOL_STRUCT:
+                expr->pointed_vnt = AST_SYMBOL_STRUCT;
+                expr->pointed.strct = symbol->pointed.strct;
+                break;
+            case AST_SYMBOL_VAR:
+                expr->pointed_vnt = AST_SYMBOL_VAR;
+                expr->pointed.var = symbol->pointed.var;
+                break;
+            }
+        } else {
+            log_error("unknown symbol", expr->loc);
+        }
+        break;
+    case AST_EXPR_NUM_LIT:
+    case AST_EXPR_STR_LIT:
+    case AST_EXPR_CHAR_LIT:
+    case AST_EXPR_TRUE:
+    case AST_EXPR_FALSE:
+    case AST_EXPR_NULL:
+        break;
+    case AST_EXPR_TUPLE:
+        subexpr = expr->rhs;
+        while(subexpr) {
+            resolve_symbols_expr(prog, subexpr);
+            subexpr = subexpr->next;
+        }
+        break;
+    case AST_EXPR_DOT:
+        resolve_symbols_expr(prog, expr->lhs);
+        break;
+    case AST_OP_CALL:
+        resolve_symbols_expr(prog, expr->lhs);
+        subexpr = expr->rhs;
+        while(subexpr) {
+            resolve_symbols_expr(prog, subexpr);
+            subexpr = subexpr->next;
+        }
+        break;
+    case AST_OP_INDEX:
+        resolve_symbols_expr(prog, expr->lhs);
+        resolve_symbols_expr(prog, expr->rhs);
+        break;
+    case AST_OP_LOG_NOT:
+    case AST_OP_BIT_NOT:
+    case AST_OP_NEG:
+    case AST_OP_REF:
+    case AST_OP_DEREF:
+    case AST_OP_ALLOC:
+    case AST_OP_PUT:
+    case AST_OP_TAKE:
+        resolve_symbols_expr(prog, expr->rhs);
+        break;
+    case AST_OP_INC:
+    case AST_OP_DEC:
+        resolve_symbols_expr(prog, expr->lhs);
+        break;
+    default:
+        resolve_symbols_expr(prog, expr->lhs);
+        resolve_symbols_expr(prog, expr->rhs);
+        break;
+    }
 }
 
 void resolve_symbols_stmts(ast_prog *prog, ast_stmt *stmt, int scope) {
-    printf("resolving symbols for stmts scope: %d\n", scope); // temp
     ast_stmt *els;
     ast_symbol *old_symbol;
     while(stmt) {
@@ -159,7 +226,6 @@ void resolve_symbols_stmts(ast_prog *prog, ast_stmt *stmt, int scope) {
 }
 
 void resolve_symbols_func(ast_prog *prog, ast_func *func) {
-    printf("resolving symbols for func: %s\n", func->name); // temp
     ast_symbol *old_symbol;
     ast_var *arg = func->args;
     while(arg) {

@@ -212,6 +212,7 @@ ast_expr *ast_expr_make_dot(YYLTYPE, ast_expr *, char *);
 ast_expr *ast_expr_make_op(YYLTYPE, ast_expr_vnt, ast_expr *, ast_expr *);
 
 ast_symbol *ast_symbol_push(ast_prog *, YYLTYPE, char *, ast_symbol_vnt, void *, int);
+ast_symbol *ast_symbol_find(ast_prog *, char *);
 void ast_symbol_pop(ast_prog *, int);
 
 #endif

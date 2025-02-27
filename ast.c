@@ -2,9 +2,6 @@
 #include <string.h>
 #include "ast.h"
 
-//temp
-#include <stdio.h>
-
 ast_prog glob_program = {NULL, NULL, NULL, NULL, NULL};
 
 void ast_func_append(ast_func **head, ast_func *func) {
@@ -203,7 +200,6 @@ ast_symbol *ast_symbol_push(ast_prog *prog, YYLTYPE loc, char *name, ast_symbol_
         }
         symbol = symbol->next;
     }
-    printf("pushing symbol: %s\n", name); // temp
     symbol = malloc(sizeof(ast_symbol));
     symbol->loc = loc;
     symbol->name = strdup(name);
@@ -225,6 +221,17 @@ ast_symbol *ast_symbol_push(ast_prog *prog, YYLTYPE loc, char *name, ast_symbol_
     return NULL;
 }
 
+ast_symbol *ast_symbol_find(ast_prog *prog, char *name) {
+    ast_symbol *symbol = prog->symbols;
+    while(symbol) {
+        if(strcmp(symbol->name, name) == 0) {
+            return symbol;
+        }
+        symbol = symbol->next;
+    }
+    return NULL;
+}
+
 void ast_symbol_pop(ast_prog *prog, int scope) {
     ast_symbol *symbol;
     while(prog->symbols) {
@@ -233,7 +240,6 @@ void ast_symbol_pop(ast_prog *prog, int scope) {
         }
         symbol = prog->symbols;
         prog->symbols = symbol->next;
-        printf("popping symbol: %s\n", symbol->name); // temp
         free(symbol->name);
         free(symbol);
     }
