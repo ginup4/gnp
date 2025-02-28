@@ -47,27 +47,27 @@ void yyerror(const char *);
 %token <char*> CHAR_LIT "char literal"
 
 // multichar operator tokens
-%token ADD_ASGN "+="
-%token SUB_ASGN "-="
-%token MUL_ASGN "*="
-%token DIV_ASGN "/="
-%token MOD_ASGN "%="
-%token OR_ASGN "|="
-%token AND_ASGN "&="
-%token XOR_ASGN "^="
+%token ADD_ASGN "'+='"
+%token SUB_ASGN "'-='"
+%token MUL_ASGN "'*='"
+%token DIV_ASGN "'/='"
+%token MOD_ASGN "'%='"
+%token OR_ASGN "'|='"
+%token AND_ASGN "'&='"
+%token XOR_ASGN "'^='"
 
-%token COMP_EQ "=="
-%token COMP_NE "!="
-%token COMP_LE "<="
-%token COMP_GE ">="
-%token COMP_LT "<"
-%token COMP_GT ">"
+%token COMP_EQ "'=='"
+%token COMP_NE "'!='"
+%token COMP_LE "'<='"
+%token COMP_GE "'>='"
+%token COMP_LT "'<'"
+%token COMP_GT "'>'"
 
-%token LOG_OR "||"
-%token LOG_AND "&&"
+%token LOG_OR "'||'"
+%token LOG_AND "'&&'"
 
-%token INC "++"
-%token DEC "--"
+%token INC "'++'"
+%token DEC "'--'"
 
 // start symbol
 %start program

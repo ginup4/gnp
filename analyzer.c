@@ -106,6 +106,7 @@ void resolve_symbols_expr(ast_prog *prog, ast_expr *expr) {
     case AST_EXPR_IDENT:
         symbol = ast_symbol_find(prog, expr->pointed.data);
         if(symbol) {
+            free(expr->pointed.data);
             switch(symbol->vnt) {
             case AST_SYMBOL_FUNC:
                 expr->pointed_vnt = AST_SYMBOL_FUNC;
