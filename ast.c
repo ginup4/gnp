@@ -62,12 +62,12 @@ void ast_var_append(ast_var **head, ast_var *var) {
     *head = var;
 }
 
-ast_var *ast_var_create(YYLTYPE loc, char *name, ast_type *type, ast_expr *value) {
+ast_var *ast_var_create(YYLTYPE loc, char *name, ast_type *type, ast_expr *expr) {
     ast_var *ret = malloc(sizeof(ast_var));
     ret->loc = loc;
     ret->name = name;
     ret->type = type;
-    ret->value = value;
+    ret->expr = expr;
     ret->next = NULL;
     return ret;
 }

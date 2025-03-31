@@ -184,8 +184,8 @@ void resolve_symbols_stmts(ast_prog *prog, ast_stmt *stmt, int scope) {
         case AST_STMT_CONTINUE:
             break;
         case AST_STMT_VAR:
-            if(stmt->var->value) {
-                resolve_symbols_expr(prog, stmt->var->value);
+            if(stmt->var->expr) {
+                resolve_symbols_expr(prog, stmt->var->expr);
             }
             break;
         case AST_STMT_RETURN:
@@ -261,6 +261,11 @@ void resolve_symbols(ast_prog *prog) {
     while(func) {
         resolve_symbols_func(prog, func);
         func = func->next;
+    }
+    ast_var *var = prog->vars;
+    while(var) {
+        resolve_symbols_expr(prog, var->expr);
+        var = var->next;
     }
 }
 

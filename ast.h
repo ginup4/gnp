@@ -50,7 +50,7 @@ typedef struct ast_var {
     YYLTYPE loc;
     char *name;
     struct ast_type *type;
-    struct ast_expr *value;
+    struct ast_expr *expr;
     struct ast_var *next;
 } ast_var;
 
