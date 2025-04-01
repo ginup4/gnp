@@ -1,5 +1,6 @@
-cflags := -Wall -Wextra
-ldflags :=
+cflags := -Wall -Wextra -Wshadow -Wno-unused-parameter -g -O0 -fsanitize=address,undefined
+#cflags := -Wall -Wextra
+ldflags := -lasan -lubsan
 
 gnpc: build/scanner.o build/parser.o build/main.o build/ast.o build/lines.o build/error.o build/analyzer.o
 	gcc $(ldflags) -o $@ $^

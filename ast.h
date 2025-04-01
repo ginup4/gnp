@@ -1,6 +1,8 @@
 #ifndef AST_H
 #define AST_H
 
+#include <stdbool.h>
+
 typedef struct YYLTYPE YYLTYPE;
 struct YYLTYPE
 {
@@ -174,6 +176,7 @@ typedef struct ast_expr {
     } pointed;
     struct ast_expr *lhs;
     struct ast_expr *rhs;
+    bool is_const;
     struct ast_expr *next;
 } ast_expr;
 

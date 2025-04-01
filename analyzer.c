@@ -5,6 +5,9 @@
 #include "ast.h"
 #include "error.h"
 
+// temp
+#include <stdio.h>
+
 void generate_symbols(ast_prog *prog) {
     ast_symbol *old_symbol;
     ast_struct *strct = prog->structs;
@@ -102,6 +105,7 @@ void deduplicate_struct_fields(ast_prog *prog) {
 void resolve_symbols_expr(ast_prog *prog, ast_expr *expr) {
     ast_expr *subexpr;
     ast_symbol *symbol;
+    bool is_const;
     switch(expr->vnt) {
     case AST_EXPR_IDENT:
         symbol = ast_symbol_find(prog, expr->pointed.data);
@@ -111,14 +115,17 @@ void resolve_symbols_expr(ast_prog *prog, ast_expr *expr) {
             case AST_SYMBOL_FUNC:
                 expr->pointed_vnt = AST_SYMBOL_FUNC;
                 expr->pointed.func = symbol->pointed.func;
+                expr->is_const = false;
                 break;
             case AST_SYMBOL_STRUCT:
                 expr->pointed_vnt = AST_SYMBOL_STRUCT;
                 expr->pointed.strct = symbol->pointed.strct;
+                expr->is_const = false; // temp ; Self(1, 2) -> true ; Self.dupa(1, 2) -> false
                 break;
             case AST_SYMBOL_VAR:
                 expr->pointed_vnt = AST_SYMBOL_VAR;
                 expr->pointed.var = symbol->pointed.var;
+                expr->is_const = false;
                 break;
             }
         } else {
@@ -131,16 +138,21 @@ void resolve_symbols_expr(ast_prog *prog, ast_expr *expr) {
     case AST_EXPR_TRUE:
     case AST_EXPR_FALSE:
     case AST_EXPR_NULL:
+        expr->is_const = true;
         break;
     case AST_EXPR_TUPLE:
         subexpr = expr->rhs;
+        is_const = true;
         while(subexpr) {
             resolve_symbols_expr(prog, subexpr);
+            is_const = is_const && subexpr->is_const;
             subexpr = subexpr->next;
         }
+        expr->is_const = is_const;
         break;
     case AST_EXPR_DOT:
         resolve_symbols_expr(prog, expr->lhs);
+        expr->is_const = false; // temp ; if have type consts ; only if lhs IS struct
         break;
     case AST_OP_CALL:
         resolve_symbols_expr(prog, expr->lhs);
@@ -149,28 +161,53 @@ void resolve_symbols_expr(ast_prog *prog, ast_expr *expr) {
             resolve_symbols_expr(prog, subexpr);
             subexpr = subexpr->next;
         }
+        expr->is_const = false;
         break;
     case AST_OP_INDEX:
         resolve_symbols_expr(prog, expr->lhs);
         resolve_symbols_expr(prog, expr->rhs);
+        expr->is_const = false;
         break;
     case AST_OP_LOG_NOT:
     case AST_OP_BIT_NOT:
     case AST_OP_NEG:
+        resolve_symbols_expr(prog, expr->rhs);
+        expr->is_const = expr->rhs->is_const;
+        break;
     case AST_OP_REF:
+        resolve_symbols_expr(prog, expr->rhs);
+        expr->is_const = (expr->rhs->vnt == AST_EXPR_IDENT && expr->rhs->pointed_vnt == AST_SYMBOL_VAR);
+        break;
     case AST_OP_DEREF:
     case AST_OP_ALLOC:
     case AST_OP_PUT:
     case AST_OP_TAKE:
         resolve_symbols_expr(prog, expr->rhs);
+        expr->is_const = false;
         break;
     case AST_OP_INC:
     case AST_OP_DEC:
         resolve_symbols_expr(prog, expr->lhs);
+        expr->is_const = false;
+        break;
+    case AST_OP_ASGN:
+    case AST_OP_ADD_ASGN:
+    case AST_OP_SUB_ASGN:
+    case AST_OP_MUL_ASGN:
+    case AST_OP_DIV_ASGN:
+    case AST_OP_MOD_ASGN:
+    case AST_OP_OR_ASGN:
+    case AST_OP_AND_ASGN:
+    case AST_OP_XOR_ASGN:
+    case AST_OP_REALLOC:
+        resolve_symbols_expr(prog, expr->lhs);
+        resolve_symbols_expr(prog, expr->rhs);
+        expr->is_const = false;
         break;
     default:
         resolve_symbols_expr(prog, expr->lhs);
         resolve_symbols_expr(prog, expr->rhs);
+        expr->is_const = (expr->lhs->is_const && expr->rhs->is_const);
         break;
     }
 }
@@ -264,7 +301,20 @@ void resolve_symbols(ast_prog *prog) {
     }
     ast_var *var = prog->vars;
     while(var) {
-        resolve_symbols_expr(prog, var->expr);
+        if(var->expr) {
+            resolve_symbols_expr(prog, var->expr);
+        }
+        var = var->next;
+    }
+}
+
+void simplify_consts(ast_prog *prog) {
+    // no simplification for now, just check
+    ast_var *var = prog->vars;
+    while(var) {
+        if(var->expr && !var->expr->is_const) {
+            log_error("value not known at compile time", var->expr->loc);
+        }
         var = var->next;
     }
 }
@@ -277,5 +327,7 @@ void analyze_ast(ast_prog *prog) {
     if(errors) return;
     resolve_symbols(prog);
     ast_symbol_pop(prog, 0);
+    if(errors) return;
+    simplify_consts(prog);
     if(errors) return;
 }
