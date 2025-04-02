@@ -24,6 +24,26 @@ typedef struct ast_prog {
     struct ast_symbol *symbols;
 } ast_prog;
 
+typedef enum ast_symbol_vnt {
+    AST_SYMBOL_UNRESOLVED,
+    AST_SYMBOL_FUNC,
+    AST_SYMBOL_STRUCT,
+    AST_SYMBOL_VAR,
+} ast_symbol_vnt;
+
+typedef struct ast_symbol {
+    YYLTYPE loc;
+    char *name;
+    enum ast_symbol_vnt vnt;
+    int scope;
+    union {
+        struct ast_func *func;
+        struct ast_struct *strct;
+        struct ast_var *var;
+    } pointed;
+    struct ast_symbol *next;
+} ast_symbol;
+
 typedef struct ast_func {
     YYLTYPE loc;
     char *name;
@@ -67,6 +87,7 @@ typedef enum ast_type_vnt {
 typedef struct ast_type {
     YYLTYPE loc;
     enum ast_type_vnt vnt;
+    enum ast_symbol_vnt pointed_vnt;
     union {
         char *name;
         ast_struct *strct;
@@ -97,25 +118,6 @@ typedef struct ast_stmt {
     struct ast_stmt *els;
     struct ast_stmt *next;
 } ast_stmt;
-
-typedef enum ast_symbol_vnt {
-    AST_SYMBOL_FUNC,
-    AST_SYMBOL_STRUCT,
-    AST_SYMBOL_VAR,
-} ast_symbol_vnt;
-
-typedef struct ast_symbol {
-    YYLTYPE loc;
-    char *name;
-    enum ast_symbol_vnt vnt;
-    int scope;
-    union {
-        struct ast_func *func;
-        struct ast_struct *strct;
-        struct ast_var *var;
-    } pointed;
-    struct ast_symbol *next;
-} ast_symbol;
 
 typedef enum ast_expr_vnt {
     AST_EXPR_IDENT,
@@ -190,18 +192,23 @@ extern ast_prog glob_program;
 // functions
 
 void ast_func_append(ast_func **, ast_func *);
+void ast_func_free(ast_func *);
 ast_func *ast_func_create(YYLTYPE, char *, ast_var *, ast_type *, ast_stmt *);
 
 void ast_struct_append(ast_struct **, ast_struct *);
+void ast_struct_free(ast_struct *);
 ast_struct *ast_struct_create(YYLTYPE, char *, ast_var *);
 
 void ast_impl_append(ast_impl **, ast_impl *);
+void ast_impl_free(ast_impl *);
 ast_impl *ast_impl_create(YYLTYPE, char *, ast_func *);
 
 void ast_var_append(ast_var **, ast_var *);
+void ast_var_free(ast_var *);
 ast_var *ast_var_create(YYLTYPE, char *, ast_type *, ast_expr *);
 
 void ast_type_append(ast_type **, ast_type *);
+void ast_type_free(ast_type *);
 ast_type *ast_type_create(YYLTYPE, char *);
 ast_type *ast_type_make_ref(YYLTYPE, ast_type *);
 ast_type *ast_type_make_arr(YYLTYPE, ast_type *, ast_expr *);
@@ -209,9 +216,11 @@ ast_type *ast_type_make_slice(YYLTYPE, ast_type *);
 ast_type *ast_type_make_tuple(YYLTYPE, ast_type *);
 
 void ast_stmt_append(ast_stmt **, ast_stmt *);
+void ast_stmts_free(ast_stmt *);
 ast_stmt *ast_stmt_create(YYLTYPE, ast_stmt_vnt, ast_var *, ast_expr *, ast_stmt *, ast_stmt *);
 
 void ast_expr_append(ast_expr **, ast_expr *);
+void ast_expr_free(ast_expr *);
 ast_expr *ast_expr_create(YYLTYPE, ast_expr_vnt, char *);
 ast_expr *ast_expr_make_tuple(YYLTYPE, ast_expr *);
 ast_expr *ast_expr_make_dot(YYLTYPE, ast_expr *, char *);

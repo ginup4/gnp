@@ -75,6 +75,7 @@ void attach_impls(ast_prog *prog) {
         }
         if(!strct) {
             log_error("impl for undefined struct", impl->loc);
+            ast_impl_free(impl);
             continue;
         }
         while(impl->funcs) {
@@ -86,6 +87,7 @@ void attach_impls(ast_prog *prog) {
                 if(strcmp(func->name, (*strct_func)->name) == 0) {
                     log_error("method already defined", func->loc);
                     log_note("here", (*strct_func)->loc);
+                    ast_func_free(func);
                     break;
                 }
                 strct_func = &(*strct_func)->next;
@@ -123,7 +125,9 @@ void deduplicate_struct_fields(ast_prog *prog) {
 void resolve_symbols_expr(ast_prog *prog, ast_expr *expr) {
     ast_expr *subexpr;
     ast_symbol *symbol;
+    ast_func *func;
     bool is_const;
+    bool found;
     switch(expr->vnt) {
     case AST_EXPR_IDENT:
         symbol = ast_symbol_find(prog, expr->pointed.data);
@@ -170,6 +174,30 @@ void resolve_symbols_expr(ast_prog *prog, ast_expr *expr) {
         break;
     case AST_EXPR_DOT:
         resolve_symbols_expr(prog, expr->lhs);
+        switch(expr->lhs->pointed_vnt) {
+        case AST_SYMBOL_FUNC:
+            log_error("functions have no members", expr->loc);
+            break;
+        case AST_SYMBOL_STRUCT:
+            found = false;
+            func = expr->lhs->pointed.strct->funcs;
+            while(func) {
+                if(strcmp(func->name, expr->pointed.data) == 0) {
+                    free(expr->pointed.data);
+                    expr->pointed_vnt = AST_SYMBOL_FUNC;
+                    expr->pointed.func = func;
+                    found = true;
+                    break;
+                }
+                func = func->next;
+            }
+            if(!found) {
+                log_error("associated function not found", expr->loc);
+            }
+            break;
+        case AST_SYMBOL_VAR: // leave for type checker
+            break;
+        }
         expr->is_const = false; // temp ; if have type consts ; only if lhs IS struct
         break;
     case AST_OP_CALL:
