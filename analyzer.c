@@ -8,6 +8,24 @@
 // temp
 #include <stdio.h>
 
+YYLTYPE default_loc = {0};
+
+void generate_base_types(ast_prog *prog) {
+    ast_struct_append(&prog->structs, ast_struct_create(default_loc, "void", NULL));
+    ast_struct_append(&prog->structs, ast_struct_create(default_loc, "char", NULL));
+    ast_struct_append(&prog->structs, ast_struct_create(default_loc, "bool", NULL));
+    ast_struct_append(&prog->structs, ast_struct_create(default_loc, "isize", NULL));
+    ast_struct_append(&prog->structs, ast_struct_create(default_loc, "usize", NULL));
+    ast_struct_append(&prog->structs, ast_struct_create(default_loc, "i8", NULL));
+    ast_struct_append(&prog->structs, ast_struct_create(default_loc, "u8", NULL));
+    ast_struct_append(&prog->structs, ast_struct_create(default_loc, "i16", NULL));
+    ast_struct_append(&prog->structs, ast_struct_create(default_loc, "u16", NULL));
+    ast_struct_append(&prog->structs, ast_struct_create(default_loc, "i32", NULL));
+    ast_struct_append(&prog->structs, ast_struct_create(default_loc, "u32", NULL));
+    ast_struct_append(&prog->structs, ast_struct_create(default_loc, "i64", NULL));
+    ast_struct_append(&prog->structs, ast_struct_create(default_loc, "u64", NULL));
+}
+
 void generate_symbols(ast_prog *prog) {
     ast_symbol *old_symbol;
     ast_struct *strct = prog->structs;
@@ -112,12 +130,12 @@ void resolve_symbols_expr(ast_prog *prog, ast_expr *expr) {
         if(symbol) {
             free(expr->pointed.data);
             switch(symbol->vnt) {
-            case AST_SYMBOL_FUNC:
+            case AST_SYMBOL_FUNC: // can only be called (for later)
                 expr->pointed_vnt = AST_SYMBOL_FUNC;
                 expr->pointed.func = symbol->pointed.func;
                 expr->is_const = false;
                 break;
-            case AST_SYMBOL_STRUCT:
+            case AST_SYMBOL_STRUCT: // can only access fields (for later)
                 expr->pointed_vnt = AST_SYMBOL_STRUCT;
                 expr->pointed.strct = symbol->pointed.strct;
                 expr->is_const = false; // temp ; Self(1, 2) -> true ; Self.dupa(1, 2) -> false
@@ -319,11 +337,127 @@ void simplify_consts(ast_prog *prog) {
     }
 }
 
+void resolve_types_type(ast_prog *prog, ast_type *type) {
+    ast_symbol *symbol;
+    ast_type *subtype;
+    switch(type->vnt) {
+    case AST_TYPE_BASE:
+        symbol = ast_symbol_find(prog, type->pointed.name);
+        if(symbol) {
+            free(type->pointed.name);
+            type->pointed.strct = symbol->pointed.strct;
+        } else {
+            log_error("unknown type", type->loc);
+        }
+        break;
+    case AST_TYPE_REF:
+    case AST_TYPE_ARR:
+    case AST_TYPE_SLICE:
+        resolve_types_type(prog, type->subtype);
+        break;
+    case AST_TYPE_TUPLE:
+        subtype = type->subtype;
+        while(subtype) {
+            resolve_types_type(prog, subtype);
+            subtype = subtype->next;
+        }
+        break;
+    }
+}
+
+void resolve_types_var(ast_prog *prog, ast_var *var) {
+    if(var->type) {
+        resolve_types_type(prog, var->type);
+    }
+}
+
+void resolve_types_stmts(ast_prog *prog, ast_stmt *stmt) {
+    ast_stmt *els;
+    while(stmt) {
+        switch(stmt->vnt) {
+        case AST_STMT_VAR:
+            resolve_types_var(prog, stmt->var);
+            break;
+        case AST_STMT_LOOP:
+            resolve_types_stmts(prog, stmt->body);
+            break;
+        case AST_STMT_WHILE:
+            resolve_types_stmts(prog, stmt->body);
+            break;
+        case AST_STMT_IF:
+            resolve_types_stmts(prog, stmt->body);
+            els = stmt->els;
+            while(els && els->expr) {
+                resolve_types_stmts(prog, els->body);
+                els = els->els;
+            }
+            if(els) {
+                resolve_types_stmts(prog, els->body);
+            }
+            break;
+        default:
+            break;
+        }
+        stmt = stmt->next;
+    }
+}
+
+void resolve_types_func(ast_prog *prog, ast_func *func) {
+    ast_symbol *symbol;
+    if(func->type) {
+        resolve_types_type(prog, func->type);
+    } else {
+        func->type = ast_type_create(func->loc, NULL);
+        symbol = ast_symbol_find(prog, "void");
+        func->type->pointed.strct = symbol->pointed.strct;
+    }
+    ast_var *var = func->args;
+    while(var) {
+        resolve_types_var(prog, var);
+        var = var->next;
+    }
+    resolve_types_stmts(prog, func->body);
+}
+
+void resolve_types(ast_prog *prog) {
+    ast_struct *strct = prog->structs;
+    ast_func *func;
+    ast_var *var;
+    while(strct) {
+        ast_symbol_push(prog, strct->loc, "Self", AST_SYMBOL_STRUCT, strct, 1);
+        var = strct->fields;
+        while(var) {
+            resolve_types_var(prog, var);
+            var = var->next;
+        }
+        func = strct->funcs;
+        while(func) {
+            resolve_types_func(prog, func);
+            func = func->next;
+        }
+        ast_symbol_pop(prog, 1);
+        strct = strct->next;
+    }
+    func = prog->funcs;
+    while(func) {
+        resolve_types_func(prog, func);
+        func = func->next;
+    }
+    var = prog->vars;
+    while(var) {
+        resolve_types_var(prog, var);
+        var = var->next;
+    }
+}
+
 void analyze_ast(ast_prog *prog) {
+    generate_base_types(prog);
     generate_symbols(prog);
     if(errors) return;
     attach_impls(prog);
     deduplicate_struct_fields(prog);
+    if(errors) return;
+    resolve_types(prog);
     if(errors) return;
     resolve_symbols(prog);
     ast_symbol_pop(prog, 0);

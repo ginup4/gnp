@@ -83,7 +83,7 @@ ast_type *ast_type_create(YYLTYPE loc, char *name) {
     ast_type *ret = malloc(sizeof(ast_type));
     ret->loc = loc;
     ret->vnt = AST_TYPE_BASE;
-    ret->name = name;
+    ret->pointed.name = name;
     ret->next = NULL;
     return ret;
 }

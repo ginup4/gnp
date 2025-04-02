@@ -1,6 +1,7 @@
-cflags := -Wall -Wextra -Wshadow -Wno-unused-parameter -g -O0 -fsanitize=address,undefined
-#cflags := -Wall -Wextra
+cflags := -Wall -Wextra -Wshadow -Wno-unused-parameter -Wno-unused-function -g -O0 -fsanitize=address,undefined
+#cflags := -O3
 ldflags := -lasan -lubsan
+#ldflags :=
 
 gnpc: build/scanner.o build/parser.o build/main.o build/ast.o build/lines.o build/error.o build/analyzer.o
 	gcc $(ldflags) -o $@ $^
@@ -21,10 +22,10 @@ build/error.o: error.c error.h lines.h
 	gcc $(cflags) -c -o $@ $<
 
 build/scanner.o: build/scanner.c build/parser.c ast.h lines.h
-	gcc -c -o $@ $<
+	gcc $(cflags) -c -o $@ $<
 
 build/parser.o: build/parser.c ast.h error.h
-	gcc -c -o $@ $<
+	gcc $(cflags) -c -o $@ $<
 
 build/scanner.c: scanner.l
 	flex -s -o $@ $<

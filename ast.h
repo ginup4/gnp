@@ -67,7 +67,10 @@ typedef enum ast_type_vnt {
 typedef struct ast_type {
     YYLTYPE loc;
     enum ast_type_vnt vnt;
-    char *name;
+    union {
+        char *name;
+        ast_struct *strct;
+    } pointed;
     struct ast_type *subtype;
     struct ast_expr *arrlen;
     struct ast_type *next;
