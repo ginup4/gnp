@@ -1,10 +1,17 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include "ast.h"
 #include "lines.h"
 
 int errors = 0;
 int warnings = 0;
+
+void _panic(const char *msg, const char *sourcefile, int linen) {
+    fprintf(stderr, "\e[95mCompiler panic: %s\e[m\n", msg);
+    fprintf(stderr, "%s: %d\n", sourcefile, linen);
+    exit(EXIT_FAILURE);
+}
 
 void log_location(YYLTYPE loc) {
     int fline = loc.first_line;

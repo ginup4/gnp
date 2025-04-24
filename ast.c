@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <string.h>
+#include "error.h"
 #include "ast.h"
 
 ast_prog glob_program = {NULL, NULL, NULL, NULL, NULL};
@@ -395,6 +396,9 @@ ast_symbol *ast_symbol_push(ast_prog *prog, YYLTYPE loc, char *name, ast_symbol_
         break;
     case AST_SYMBOL_VAR:
         symbol->pointed.var = pointed;
+        break;
+    case AST_SYMBOL_UNRESOLVED:
+        panic("resolving to unresolved symbol");
         break;
     }
     symbol->scope = scope;

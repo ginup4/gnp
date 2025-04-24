@@ -149,6 +149,9 @@ void resolve_symbols_expr(ast_prog *prog, ast_expr *expr) {
                 expr->pointed.var = symbol->pointed.var;
                 expr->is_const = false;
                 break;
+            case AST_SYMBOL_UNRESOLVED:
+                panic("unresolved symbol in symbol stack");
+                break;
             }
         } else {
             log_error("unknown symbol", expr->loc);
@@ -196,6 +199,9 @@ void resolve_symbols_expr(ast_prog *prog, ast_expr *expr) {
             }
             break;
         case AST_SYMBOL_VAR: // leave for type checker
+            break;
+        case AST_SYMBOL_UNRESOLVED:
+            panic("symbol resolved to unresolved symbol");
             break;
         }
         expr->is_const = false; // temp ; if have type consts ; only if lhs IS struct
