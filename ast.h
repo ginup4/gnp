@@ -216,7 +216,7 @@ ast_type *ast_type_make_slice(YYLTYPE, ast_type *);
 ast_type *ast_type_make_tuple(YYLTYPE, ast_type *);
 
 void ast_stmt_append(ast_stmt **, ast_stmt *);
-void ast_stmts_free(ast_stmt *);
+void ast_stmt_free(ast_stmt *);
 ast_stmt *ast_stmt_create(YYLTYPE, ast_stmt_vnt, ast_var *, ast_expr *, ast_stmt *, ast_stmt *);
 
 void ast_expr_append(ast_expr **, ast_expr *);

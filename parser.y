@@ -46,6 +46,8 @@ void yyerror(const char *);
 %token <char*> STR_LIT "string literal"
 %token <char*> CHAR_LIT "char literal"
 
+%destructor { free($$); } IDENT NUM_LIT STR_LIT CHAR_LIT
+
 // multichar operator tokens
 %token ADD_ASGN "'+='"
 %token SUB_ASGN "'-='"
@@ -91,6 +93,14 @@ void yyerror(const char *);
 %nterm <ast_expr*> callargs
 %nterm <ast_expr*> exprseq
 %nterm <ast_expr*> expr
+
+%destructor { ast_func_free($$); } func_decl func_decls
+%destructor { ast_struct_free($$); } struct_decl
+%destructor { ast_impl_free($$); } impl_decl
+%destructor { ast_var_free($$); } arg_decls var_decl
+%destructor { ast_type_free($$); } type typeseq
+%destructor { ast_stmt_free($$); } stmts stmt loop_stmt while_stmt if_stmt elif_stmt else_stmt
+%destructor { ast_expr_free($$); } callargs exprseq expr
 
 // operator precedence
 %left REALLOC

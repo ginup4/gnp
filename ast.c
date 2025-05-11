@@ -13,17 +13,16 @@ void ast_func_append(ast_func **head, ast_func *func) {
 }
 
 void ast_func_free(ast_func *func) {
-    free(func->name);
-    ast_var *var = func->args;
-    while(var) {
-        ast_var_free(var);
-        var = var->next;
-    }
-    if(func->type) {
+    ast_func *next;
+    while(func) {
+        free(func->name);
+        ast_var_free(func->args);
         ast_type_free(func->type);
+        ast_stmt_free(func->body);
+        next = func->next;
+        free(func);
+        func = next;
     }
-    ast_stmts_free(func->body);
-    free(func);
 }
 
 ast_func *ast_func_create(YYLTYPE loc, char *name, ast_var *args, ast_type *type, ast_stmt *body) {
@@ -45,18 +44,15 @@ void ast_struct_append(ast_struct **head, ast_struct *strct) {
 }
 
 void ast_struct_free(ast_struct *strct) {
-    free(strct->name);
-    ast_var *var = strct->fields;
-    while(var) {
-        ast_var_free(var);
-        var = var->next;
+    ast_struct *next;
+    while(strct) {
+        free(strct->name);
+        ast_var_free(strct->fields);
+        ast_func_free(strct->funcs);
+        next = strct->next;
+        free(strct);
+        strct = next;
     }
-    ast_func *func = strct->funcs;
-    while(func) {
-        ast_func_free(func);
-        func = func->next;
-    }
-    free(strct);
 }
 
 ast_struct *ast_struct_create(YYLTYPE loc, char *name, ast_var *fields) {
@@ -77,13 +73,14 @@ void ast_impl_append(ast_impl **head, ast_impl *impl) {
 }
 
 void ast_impl_free(ast_impl *impl) {
-    free(impl->name);
-    ast_func *func = impl->funcs;
-    while(func) {
-        ast_func_free(func);
-        func = func->next;
+    ast_impl *next;
+    while(impl) {
+        free(impl->name);
+        ast_func_free(impl->funcs);
+        next = impl->next;
+        free(impl);
+        impl = next;
     }
-    free(impl);
 }
 
 ast_impl *ast_impl_create(YYLTYPE loc, char *name, ast_func *funcs) {
@@ -103,14 +100,15 @@ void ast_var_append(ast_var **head, ast_var *var) {
 }
 
 void ast_var_free(ast_var *var) {
-    free(var->name);
-    if(var->type) {
+    ast_var *next;
+    while(var) {
+        free(var->name);
         ast_type_free(var->type);
-    }
-    if(var->expr) {
         ast_expr_free(var->expr);
+        next = var->next;
+        free(var);
+        var = next;
     }
-    free(var);
 }
 
 ast_var *ast_var_create(YYLTYPE loc, char *name, ast_type *type, ast_expr *expr) {
@@ -131,27 +129,25 @@ void ast_type_append(ast_type **head, ast_type *type) {
 }
 
 void ast_type_free(ast_type *type) {
-    ast_type *subtype;
-    switch(type->vnt) {
-    case AST_TYPE_BASE:
-        if(type->pointed_vnt == AST_SYMBOL_UNRESOLVED) {
-            free(type->pointed.name);
+    ast_type *next;
+    while(type) {
+        switch(type->vnt) {
+        case AST_TYPE_BASE:
+            if(type->pointed_vnt == AST_SYMBOL_UNRESOLVED) {
+                free(type->pointed.name);
+            }
+            break;
+        case AST_TYPE_REF:
+        case AST_TYPE_ARR:
+        case AST_TYPE_SLICE:
+        case AST_TYPE_TUPLE:
+            ast_type_free(type->subtype);
+            break;
         }
-        break;
-    case AST_TYPE_REF:
-    case AST_TYPE_ARR:
-    case AST_TYPE_SLICE:
-        ast_type_free(type->subtype);
-        break;
-    case AST_TYPE_TUPLE:
-        subtype = type->subtype;
-        while(subtype) {
-            ast_type_free(subtype);
-            subtype = subtype->next;
-        }
-        break;
+        next = type->next;
+        free(type);
+        type = next;
     }
-    free(type);
 }
 
 ast_type *ast_type_create(YYLTYPE loc, char *name) {
@@ -208,8 +204,8 @@ void ast_stmt_append(ast_stmt **head, ast_stmt *stmt) {
     *head = stmt;
 }
 
-void ast_stmts_free(ast_stmt *stmt) {
-    ast_stmt *temp;
+void ast_stmt_free(ast_stmt *stmt) {
+    ast_stmt *next;
     ast_stmt *els;
     while(stmt) {
         switch(stmt->vnt) {
@@ -221,36 +217,34 @@ void ast_stmts_free(ast_stmt *stmt) {
             ast_expr_free(stmt->expr);
             break;
         case AST_STMT_RETURN:
-            if(stmt->expr) {
-                ast_expr_free(stmt->expr);
-            }
+            ast_expr_free(stmt->expr);
             break;
         case AST_STMT_LOOP:
-            ast_stmts_free(stmt->body);
+            ast_stmt_free(stmt->body);
             break;
         case AST_STMT_WHILE:
             ast_expr_free(stmt->expr);
-            ast_stmts_free(stmt->body);
+            ast_stmt_free(stmt->body);
             break;
         case AST_STMT_IF:
             ast_expr_free(stmt->expr);
-            ast_stmts_free(stmt->body);
+            ast_stmt_free(stmt->body);
             els = stmt->els;
             while(els && els->expr) {
                 ast_expr_free(els->expr);
-                ast_stmts_free(els->body);
+                ast_stmt_free(els->body);
                 els = els->els;
             }
             if(els) {
-                ast_stmts_free(els->body);
+                ast_stmt_free(els->body);
             }
             break;
         default:
             break;
         }
-        temp = stmt->next;
+        next = stmt->next;
         free(stmt);
-        stmt = temp;
+        stmt = next;
     }
 }
 
@@ -274,62 +268,49 @@ void ast_expr_append(ast_expr **head, ast_expr *expr) {
 }
 
 void ast_expr_free(ast_expr *expr) {
-    ast_expr *subexpr;
-    switch(expr->vnt) {
-    case AST_EXPR_IDENT:
-        if(expr->pointed_vnt == AST_SYMBOL_UNRESOLVED) {
+    ast_expr *next;
+    while(expr) {
+        switch(expr->vnt) {
+        case AST_EXPR_IDENT:
+            if(expr->pointed_vnt == AST_SYMBOL_UNRESOLVED) {
+                free(expr->pointed.data);
+            }
+            break;
+        case AST_EXPR_NUM_LIT:
+        case AST_EXPR_STR_LIT:
+        case AST_EXPR_CHAR_LIT:
             free(expr->pointed.data);
+            break;
+        case AST_EXPR_DOT:
+            ast_expr_free(expr->lhs);
+            if(expr->pointed_vnt == AST_SYMBOL_UNRESOLVED) {
+                free(expr->pointed.data);
+            }
+            break;
+        case AST_OP_LOG_NOT:
+        case AST_OP_BIT_NOT:
+        case AST_OP_NEG:
+        case AST_OP_REF:
+        case AST_OP_DEREF:
+        case AST_OP_ALLOC:
+        case AST_OP_PUT:
+        case AST_OP_TAKE:
+        case AST_EXPR_TUPLE:
+            ast_expr_free(expr->rhs);
+            break;
+        case AST_OP_INC:
+        case AST_OP_DEC:
+            ast_expr_free(expr->lhs);
+            break;
+        default:
+            ast_expr_free(expr->lhs);
+            ast_expr_free(expr->rhs);
+            break;
         }
-        break;
-    case AST_EXPR_NUM_LIT:
-    case AST_EXPR_STR_LIT:
-    case AST_EXPR_CHAR_LIT:
-    case AST_EXPR_TRUE:
-    case AST_EXPR_FALSE:
-    case AST_EXPR_NULL:
-        free(expr->pointed.data);
-        break;
-    case AST_EXPR_TUPLE:
-        subexpr = expr->rhs;
-        while(subexpr) {
-            ast_expr_free(subexpr);
-            subexpr = subexpr->next;
-        }
-        break;
-    case AST_EXPR_DOT:
-        ast_expr_free(expr->lhs);
-        if(expr->pointed_vnt == AST_SYMBOL_UNRESOLVED) {
-            free(expr->pointed.data);
-        }
-        break;
-    case AST_OP_CALL:
-        ast_expr_free(expr->lhs);
-        subexpr = expr->rhs;
-        while(subexpr) {
-            ast_expr_free(subexpr);
-            subexpr = subexpr->next;
-        }
-        break;
-    case AST_OP_LOG_NOT:
-    case AST_OP_BIT_NOT:
-    case AST_OP_NEG:
-    case AST_OP_REF:
-    case AST_OP_DEREF:
-    case AST_OP_ALLOC:
-    case AST_OP_PUT:
-    case AST_OP_TAKE:
-        ast_expr_free(expr->rhs);
-        break;
-    case AST_OP_INC:
-    case AST_OP_DEC:
-        ast_expr_free(expr->lhs);
-        break;
-    default:
-        ast_expr_free(expr->lhs);
-        ast_expr_free(expr->rhs);
-        break;
+        next = expr->next;
+        free(expr);
+        expr = next;
     }
-    free(expr);
 }
 
 ast_expr *ast_expr_create(YYLTYPE loc, ast_expr_vnt vnt, char *data) {
