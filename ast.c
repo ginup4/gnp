@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 #include "error.h"
 #include "ast.h"
@@ -25,7 +26,7 @@ void ast_func_free(ast_func *func) {
     }
 }
 
-ast_func *ast_func_create(YYLTYPE loc, char *name, ast_var *args, ast_type *type, ast_stmt *body) {
+ast_func *ast_func_create(location loc, char *name, ast_var *args, ast_type *type, ast_stmt *body) {
     ast_func *ret = malloc(sizeof(ast_func));
     ret->loc = loc;
     ret->name = name;
@@ -55,7 +56,7 @@ void ast_struct_free(ast_struct *strct) {
     }
 }
 
-ast_struct *ast_struct_create(YYLTYPE loc, char *name, ast_var *fields) {
+ast_struct *ast_struct_create(location loc, char *name, ast_var *fields) {
     ast_struct *ret = malloc(sizeof(ast_struct));
     ret->loc = loc;
     ret->name = name;
@@ -83,7 +84,7 @@ void ast_impl_free(ast_impl *impl) {
     }
 }
 
-ast_impl *ast_impl_create(YYLTYPE loc, char *name, ast_func *funcs) {
+ast_impl *ast_impl_create(location loc, char *name, ast_func *funcs) {
     ast_impl *ret = malloc(sizeof(ast_impl));
     ret->loc = loc;
     ret->name = name;
@@ -111,7 +112,7 @@ void ast_var_free(ast_var *var) {
     }
 }
 
-ast_var *ast_var_create(YYLTYPE loc, char *name, ast_type *type, ast_expr *expr) {
+ast_var *ast_var_create(location loc, char *name, ast_type *type, ast_expr *expr) {
     ast_var *ret = malloc(sizeof(ast_var));
     ret->loc = loc;
     ret->name = name;
@@ -150,7 +151,7 @@ void ast_type_free(ast_type *type) {
     }
 }
 
-ast_type *ast_type_create(YYLTYPE loc, char *name) {
+ast_type *ast_type_create(location loc, char *name) {
     ast_type *ret = malloc(sizeof(ast_type));
     ret->loc = loc;
     ret->vnt = AST_TYPE_BASE;
@@ -160,7 +161,7 @@ ast_type *ast_type_create(YYLTYPE loc, char *name) {
     return ret;
 }
 
-ast_type *ast_type_make_ref(YYLTYPE loc, ast_type *subtype) {
+ast_type *ast_type_make_ref(location loc, ast_type *subtype) {
     ast_type *ret = malloc(sizeof(ast_type));
     ret->loc = loc;
     ret->vnt = AST_TYPE_REF;
@@ -169,7 +170,7 @@ ast_type *ast_type_make_ref(YYLTYPE loc, ast_type *subtype) {
     return ret;
 }
 
-ast_type *ast_type_make_arr(YYLTYPE loc, ast_type *subtype, ast_expr *arrlen) {
+ast_type *ast_type_make_arr(location loc, ast_type *subtype, ast_expr *arrlen) {
     ast_type *ret = malloc(sizeof(ast_type));
     ret->loc = loc;
     ret->vnt = AST_TYPE_ARR;
@@ -179,7 +180,7 @@ ast_type *ast_type_make_arr(YYLTYPE loc, ast_type *subtype, ast_expr *arrlen) {
     return ret;
 }
 
-ast_type *ast_type_make_slice(YYLTYPE loc, ast_type *subtype) {
+ast_type *ast_type_make_slice(location loc, ast_type *subtype) {
     ast_type *ret = malloc(sizeof(ast_type));
     ret->loc = loc;
     ret->vnt = AST_TYPE_SLICE;
@@ -188,7 +189,7 @@ ast_type *ast_type_make_slice(YYLTYPE loc, ast_type *subtype) {
     return ret;
 }
 
-ast_type *ast_type_make_tuple(YYLTYPE loc, ast_type *subtypes) {
+ast_type *ast_type_make_tuple(location loc, ast_type *subtypes) {
     ast_type *ret = malloc(sizeof(ast_type));
     ret->loc = loc;
     ret->vnt = AST_TYPE_TUPLE;
@@ -248,7 +249,7 @@ void ast_stmt_free(ast_stmt *stmt) {
     }
 }
 
-ast_stmt *ast_stmt_create(YYLTYPE loc, ast_stmt_vnt vnt, ast_var *var, ast_expr *expr, ast_stmt *body, ast_stmt *els) {
+ast_stmt *ast_stmt_create(location loc, ast_stmt_vnt vnt, ast_var *var, ast_expr *expr, ast_stmt *body, ast_stmt *els) {
     ast_stmt *ret = malloc(sizeof(ast_stmt));
     ret->loc = loc;
     ret->vnt = vnt;
@@ -280,6 +281,10 @@ void ast_expr_free(ast_expr *expr) {
         case AST_EXPR_STR_LIT:
         case AST_EXPR_CHAR_LIT:
             free(expr->pointed.data);
+            break;
+        case AST_EXPR_TRUE:
+        case AST_EXPR_FALSE:
+        case AST_EXPR_NULL:
             break;
         case AST_EXPR_DOT:
             ast_expr_free(expr->lhs);
@@ -313,7 +318,7 @@ void ast_expr_free(ast_expr *expr) {
     }
 }
 
-ast_expr *ast_expr_create(YYLTYPE loc, ast_expr_vnt vnt, char *data) {
+ast_expr *ast_expr_create(location loc, ast_expr_vnt vnt, char *data) {
     ast_expr *ret = malloc(sizeof(ast_expr));
     ret->loc = loc;
     ret->vnt = vnt;
@@ -323,7 +328,7 @@ ast_expr *ast_expr_create(YYLTYPE loc, ast_expr_vnt vnt, char *data) {
     return ret;
 }
 
-ast_expr *ast_expr_make_tuple(YYLTYPE loc, ast_expr *exprs) {
+ast_expr *ast_expr_make_tuple(location loc, ast_expr *exprs) {
     ast_expr *ret = malloc(sizeof(ast_expr));
     ret->loc = loc;
     ret->vnt = AST_EXPR_TUPLE;
@@ -332,7 +337,7 @@ ast_expr *ast_expr_make_tuple(YYLTYPE loc, ast_expr *exprs) {
     return ret;
 }
 
-ast_expr *ast_expr_make_dot(YYLTYPE loc, ast_expr *expr, char *data) {
+ast_expr *ast_expr_make_dot(location loc, ast_expr *expr, char *data) {
     ast_expr *ret = malloc(sizeof(ast_expr));
     ret->loc = loc;
     ret->vnt = AST_EXPR_DOT;
@@ -343,7 +348,7 @@ ast_expr *ast_expr_make_dot(YYLTYPE loc, ast_expr *expr, char *data) {
     return ret;
 }
 
-ast_expr *ast_expr_make_op(YYLTYPE loc, ast_expr_vnt vnt, ast_expr *lhs, ast_expr *rhs) {
+ast_expr *ast_expr_make_op(location loc, ast_expr_vnt vnt, ast_expr *lhs, ast_expr *rhs) {
     ast_expr *ret = malloc(sizeof(ast_expr));
     ret->loc = loc;
     ret->vnt = vnt;
@@ -353,7 +358,7 @@ ast_expr *ast_expr_make_op(YYLTYPE loc, ast_expr_vnt vnt, ast_expr *lhs, ast_exp
     return ret;
 }
 
-ast_symbol *ast_symbol_push(ast_prog *prog, YYLTYPE loc, char *name, ast_symbol_vnt vnt, void *pointed, int scope) {
+ast_symbol *ast_symbol_push(ast_prog *prog, location loc, char *name, ast_symbol_vnt vnt, void *pointed, int scope) {
     ast_symbol *symbol = prog->symbols;
     while(symbol) {
         if(symbol->scope < scope) {

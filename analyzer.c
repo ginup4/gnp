@@ -2,13 +2,14 @@
 #include <string.h>
 #include <stdbool.h>
 #include "analyzer.h"
+#include "type_checker.h"
 #include "ast.h"
 #include "error.h"
 
 // temp
 #include <stdio.h>
 
-YYLTYPE default_loc = {0};
+struct location default_loc = {0};
 
 void generate_base_types(ast_prog *prog) {
     ast_struct_append(&prog->structs, ast_struct_create(default_loc, "void", NULL));
@@ -150,7 +151,9 @@ void resolve_symbols_expr(ast_prog *prog, ast_expr *expr) {
                 expr->is_const = false;
                 break;
             case AST_SYMBOL_UNRESOLVED:
-                panic("unresolved symbol in symbol stack");
+                if(errors == 0) {
+                    panic("unresolved symbol in symbol stack");
+                }
                 break;
             }
         } else {
@@ -201,7 +204,9 @@ void resolve_symbols_expr(ast_prog *prog, ast_expr *expr) {
         case AST_SYMBOL_VAR: // leave for type checker
             break;
         case AST_SYMBOL_UNRESOLVED:
-            panic("symbol resolved to unresolved symbol");
+            if(errors == 0) {
+                panic("symbol resolved to unresolved symbol");
+            }
             break;
         }
         expr->is_const = false; // temp ; if have type consts ; only if lhs IS struct
@@ -227,9 +232,6 @@ void resolve_symbols_expr(ast_prog *prog, ast_expr *expr) {
         expr->is_const = expr->rhs->is_const;
         break;
     case AST_OP_REF:
-        resolve_symbols_expr(prog, expr->rhs);
-        expr->is_const = (expr->rhs->vnt == AST_EXPR_IDENT && expr->rhs->pointed_vnt == AST_SYMBOL_VAR);
-        break;
     case AST_OP_DEREF:
     case AST_OP_ALLOC:
     case AST_OP_PUT:
@@ -495,6 +497,8 @@ void analyze_ast(ast_prog *prog) {
     if(errors) return;
     resolve_symbols(prog);
     ast_symbol_pop(prog, 0);
+    if(errors) return;
+    type_check(prog);
     if(errors) return;
     simplify_consts(prog);
     if(errors) return;

@@ -2,17 +2,18 @@
 #define AST_H
 
 #include <stdbool.h>
+#include "lines.h"
 
-typedef struct YYLTYPE YYLTYPE;
-struct YYLTYPE
-{
-  int first_line;
-  int first_column;
-  int last_line;
-  int last_column;
-};
-# define YYLTYPE_IS_DECLARED 1
-# define YYLTYPE_IS_TRIVIAL 1
+//typedef struct YYLTYPE YYLTYPE;
+//struct YYLTYPE
+//{
+//  int first_line;
+//  int first_column;
+//  int last_line;
+//  int last_column;
+//};
+//# define YYLTYPE_IS_DECLARED 1
+//# define YYLTYPE_IS_TRIVIAL 1
 
 // typedefs
 
@@ -32,7 +33,7 @@ typedef enum ast_symbol_vnt {
 } ast_symbol_vnt;
 
 typedef struct ast_symbol {
-    YYLTYPE loc;
+    location loc;
     char *name;
     enum ast_symbol_vnt vnt;
     int scope;
@@ -45,7 +46,7 @@ typedef struct ast_symbol {
 } ast_symbol;
 
 typedef struct ast_func {
-    YYLTYPE loc;
+    location loc;
     char *name;
     struct ast_var *args;
     struct ast_type *type;
@@ -54,7 +55,7 @@ typedef struct ast_func {
 } ast_func;
 
 typedef struct ast_struct {
-    YYLTYPE loc;
+    location loc;
     char *name;
     struct ast_var *fields;
     struct ast_func *funcs;
@@ -62,14 +63,14 @@ typedef struct ast_struct {
 } ast_struct;
 
 typedef struct ast_impl {
-    YYLTYPE loc;
+    location loc;
     char *name;
     struct ast_func *funcs;
     struct ast_impl *next;
 } ast_impl;
 
 typedef struct ast_var {
-    YYLTYPE loc;
+    location loc;
     char *name;
     struct ast_type *type;
     struct ast_expr *expr;
@@ -85,7 +86,7 @@ typedef enum ast_type_vnt {
 } ast_type_vnt;
 
 typedef struct ast_type {
-    YYLTYPE loc;
+    location loc;
     enum ast_type_vnt vnt;
     enum ast_symbol_vnt pointed_vnt;
     union {
@@ -110,7 +111,7 @@ typedef enum ast_stmt_vnt {
 } ast_stmt_vnt;
 
 typedef struct ast_stmt {
-    YYLTYPE loc;
+    location loc;
     enum ast_stmt_vnt vnt;
     struct ast_var *var;
     struct ast_expr *expr;
@@ -170,7 +171,7 @@ typedef enum ast_expr_vnt {
 } ast_expr_vnt;
 
 typedef struct ast_expr {
-    YYLTYPE loc;
+    location loc;
     enum ast_expr_vnt vnt;
     enum ast_symbol_vnt pointed_vnt;
     union {
@@ -193,40 +194,40 @@ extern ast_prog glob_program;
 
 void ast_func_append(ast_func **, ast_func *);
 void ast_func_free(ast_func *);
-ast_func *ast_func_create(YYLTYPE, char *, ast_var *, ast_type *, ast_stmt *);
+ast_func *ast_func_create(location, char *, ast_var *, ast_type *, ast_stmt *);
 
 void ast_struct_append(ast_struct **, ast_struct *);
 void ast_struct_free(ast_struct *);
-ast_struct *ast_struct_create(YYLTYPE, char *, ast_var *);
+ast_struct *ast_struct_create(location, char *, ast_var *);
 
 void ast_impl_append(ast_impl **, ast_impl *);
 void ast_impl_free(ast_impl *);
-ast_impl *ast_impl_create(YYLTYPE, char *, ast_func *);
+ast_impl *ast_impl_create(location, char *, ast_func *);
 
 void ast_var_append(ast_var **, ast_var *);
 void ast_var_free(ast_var *);
-ast_var *ast_var_create(YYLTYPE, char *, ast_type *, ast_expr *);
+ast_var *ast_var_create(location, char *, ast_type *, ast_expr *);
 
 void ast_type_append(ast_type **, ast_type *);
 void ast_type_free(ast_type *);
-ast_type *ast_type_create(YYLTYPE, char *);
-ast_type *ast_type_make_ref(YYLTYPE, ast_type *);
-ast_type *ast_type_make_arr(YYLTYPE, ast_type *, ast_expr *);
-ast_type *ast_type_make_slice(YYLTYPE, ast_type *);
-ast_type *ast_type_make_tuple(YYLTYPE, ast_type *);
+ast_type *ast_type_create(location, char *);
+ast_type *ast_type_make_ref(location, ast_type *);
+ast_type *ast_type_make_arr(location, ast_type *, ast_expr *);
+ast_type *ast_type_make_slice(location, ast_type *);
+ast_type *ast_type_make_tuple(location, ast_type *);
 
 void ast_stmt_append(ast_stmt **, ast_stmt *);
 void ast_stmt_free(ast_stmt *);
-ast_stmt *ast_stmt_create(YYLTYPE, ast_stmt_vnt, ast_var *, ast_expr *, ast_stmt *, ast_stmt *);
+ast_stmt *ast_stmt_create(location, ast_stmt_vnt, ast_var *, ast_expr *, ast_stmt *, ast_stmt *);
 
 void ast_expr_append(ast_expr **, ast_expr *);
 void ast_expr_free(ast_expr *);
-ast_expr *ast_expr_create(YYLTYPE, ast_expr_vnt, char *);
-ast_expr *ast_expr_make_tuple(YYLTYPE, ast_expr *);
-ast_expr *ast_expr_make_dot(YYLTYPE, ast_expr *, char *);
-ast_expr *ast_expr_make_op(YYLTYPE, ast_expr_vnt, ast_expr *, ast_expr *);
+ast_expr *ast_expr_create(location, ast_expr_vnt, char *);
+ast_expr *ast_expr_make_tuple(location, ast_expr *);
+ast_expr *ast_expr_make_dot(location, ast_expr *, char *);
+ast_expr *ast_expr_make_op(location, ast_expr_vnt, ast_expr *, ast_expr *);
 
-ast_symbol *ast_symbol_push(ast_prog *, YYLTYPE, char *, ast_symbol_vnt, void *, int);
+ast_symbol *ast_symbol_push(ast_prog *, location, char *, ast_symbol_vnt, void *, int);
 ast_symbol *ast_symbol_find(ast_prog *, char *);
 void ast_symbol_pop(ast_prog *, int);
 

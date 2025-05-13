@@ -14,6 +14,8 @@ void usage(char *progname) {
     exit(EXIT_FAILURE);
 }
 
+filename init_file = { NULL, NULL, 0, { 0, 0, 0, 0, NULL} };
+
 int main(int argc, char **argv) {
     if(argc > 1) {
         yyin = fopen(argv[1], "r");
@@ -21,11 +23,12 @@ int main(int argc, char **argv) {
             perror(argv[1]);
             return EXIT_FAILURE;
         }
-        filename = argv[1];
+        init_file.name = argv[1];
     } else {
         yyin = stdin;
-        filename = "<stdin>";
+        init_file.name = "<stdin>";
     }
+    first_file = current_file = last_file = &init_file;
 
     if(yyparse()) {
         return EXIT_FAILURE;

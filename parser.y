@@ -2,12 +2,43 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "../ast.h"
+#include "../lines.h"
 #include "../error.h"
 extern int yylex();
 void yyerror(const char *);
+# define YYLLOC_DEFAULT(Cur, Rhs, N)                      \
+do                                                        \
+  if (N)                                                  \
+    {                                                     \
+      (Cur).first_line   = YYRHSLOC(Rhs, 1).first_line;   \
+      (Cur).first_column = YYRHSLOC(Rhs, 1).first_column; \
+      (Cur).last_line    = YYRHSLOC(Rhs, N).last_line;    \
+      (Cur).last_column  = YYRHSLOC(Rhs, N).last_column;  \
+      (Cur).file  = YYRHSLOC(Rhs, 1).file;                \
+    }                                                     \
+  else                                                    \
+    {                                                     \
+      (Cur).first_line   = (Cur).last_line   =            \
+        YYRHSLOC(Rhs, 0).last_line;                       \
+      (Cur).first_column = (Cur).last_column =            \
+        YYRHSLOC(Rhs, 0).last_column;                     \
+      (Cur).file  = YYRHSLOC(Rhs, 0).file;                \
+    }                                                     \
+while (0)
 %}
 
+%initial-action
+{
+    yylloc.first_line = 1;
+    yylloc.first_column = 1;
+    yylloc.last_line = 1;
+    yylloc.last_column = 1;
+    yylloc.file = current_file;
+}
+
 %locations
+
+%define api.location.type { location }
 
 %define api.value.type union
 
@@ -166,6 +197,7 @@ type:
     IDENT { $$ = ast_type_create(@$, $1); }
 |   '(' typeseq ')' { $$ = ast_type_make_tuple(@$, $2); }
 |   '&' type { $$ = ast_type_make_ref(@$, $2); }
+|   LOG_AND type { $$ = ast_type_make_ref(@$, ast_type_make_ref(@$, $2)); }
 |   '[' type ';' expr ']' { $$ = ast_type_make_arr(@$, $2, $4); }
 |   '[' type ']' { $$ = ast_type_make_slice(@$, $2); }
 ;

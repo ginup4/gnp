@@ -3,7 +3,13 @@ cflags := -Wall -Wextra -Wshadow -Wno-unused-parameter -Wno-unused-function -g -
 ldflags := -lasan -lubsan
 #ldflags :=
 
-gnpc: build/scanner.o build/parser.o build/main.o build/ast.o build/lines.o build/error.o build/analyzer.o
+.PHONY: make
+make: build gnpc
+
+build:
+	mkdir build
+
+gnpc: build/scanner.o build/parser.o build/main.o build/ast.o build/lines.o build/error.o build/analyzer.o build/type_checker.o
 	gcc $(ldflags) -o $@ $^
 
 build/main.o: main.c ast.h print_ast.c lines.h error.h analyzer.h
@@ -12,7 +18,10 @@ build/main.o: main.c ast.h print_ast.c lines.h error.h analyzer.h
 build/ast.o: ast.c ast.h
 	gcc $(cflags) -c -o $@ $<
 
-build/analyzer.o: analyzer.c analyzer.h ast.h
+build/analyzer.o: analyzer.c analyzer.h ast.h error.h type_checker.h
+	gcc $(cflags) -c -o $@ $<
+
+build/type_checker.o: type_checker.c ast.h error.h
 	gcc $(cflags) -c -o $@ $<
 
 build/lines.o: lines.c lines.h

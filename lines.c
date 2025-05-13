@@ -4,7 +4,7 @@
 
 line *first_line = NULL;
 line *last_line = NULL;
-char *filename;
+int current_line_num = 0;
 
 void append_line(char *str) {
     line *new_line = malloc(sizeof(line));
@@ -16,4 +16,18 @@ void append_line(char *str) {
         last_line->next = new_line;
         last_line = new_line;
     }
+    current_line_num++;
+}
+
+filename *first_file = NULL;
+filename *current_file = NULL;
+filename *last_file = NULL;
+
+void append_file(char *name, location loc) {
+    filename *new_file = malloc(sizeof(filename));
+    new_file->name = strdup(name);
+    new_file->next = NULL;
+    new_file->loc = loc;
+    last_file->next = new_file;
+    last_file = new_file;
 }

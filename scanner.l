@@ -1,10 +1,12 @@
 %{
-#include "../ast.h"
-#include "parser.h"
-#include "../lines.h"
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <errno.h>
+#include "../error.h"
+#include "../ast.h"
+#include "../lines.h"
+#include "parser.h"
 #define YY_USER_ACTION \
     yylloc.first_line = yylloc.last_line; \
     yylloc.first_column = yylloc.last_column; \
@@ -16,7 +18,8 @@ size_t line_input(char *, size_t);
 
 %%
 
-#[^\n]*$                 /* comment */
+#[^\n]*$                    /* comment */
+^$[^\n]*$                   append_file(yytext + 1, yylloc); /* include */
 
 fn                          return FN;
 let                         return LET;
@@ -100,17 +103,13 @@ as                          return YYUNDEF;
 
 %%
 
-int yywrap() {
-    return 1;
-}
-
 char *line_input_buf = NULL;
 size_t line_input_cap = 0;
 ssize_t line_input_len = 0;
 size_t line_input_loc = 0;
 
 size_t line_input(char *buf, size_t max_size) {
-    if(line_input_loc >= (unsigned) line_input_len) {
+    if((ssize_t) line_input_loc >= line_input_len) {
         line_input_len = getline(&line_input_buf, &line_input_cap, yyin);
         if(line_input_len < 0) {
             return YY_NULL;
@@ -128,4 +127,24 @@ size_t line_input(char *buf, size_t max_size) {
         line_input_loc += bytes_avail;
         return bytes_avail;
     }
+}
+
+int yywrap() {
+    fclose(yyin);
+    current_file = current_file->next;
+    if(!current_file) {
+        return 1;
+    }
+    yyin = fopen(current_file->name, "r");
+    if(!yyin) {
+        log_error(strerror(errno), current_file->loc);
+        return 1;
+    }
+    current_file->line_offset = current_line_num;
+    yylloc.first_line = 1;
+    yylloc.first_column = 1;
+    yylloc.last_line = 1;
+    yylloc.last_column = 1;
+    yylloc.file = current_file;
+    return 0;
 }

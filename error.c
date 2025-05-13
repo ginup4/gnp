@@ -13,7 +13,7 @@ void _panic(const char *msg, const char *sourcefile, int linen) {
     exit(EXIT_FAILURE);
 }
 
-void log_location(YYLTYPE loc) {
+void log_location(location loc) {
     int fline = loc.first_line;
     int fcol = loc.first_column;
     int lline = loc.last_line;
@@ -21,8 +21,8 @@ void log_location(YYLTYPE loc) {
     line *curr_line = first_line;
     int curr_line_ind = 1;
     if(fline == lline) {
-        fprintf(stderr, "%s: %d:%d-%d\n", filename, fline, fcol, lcol - 1);
-        while(curr_line_ind < fline && curr_line) {
+        fprintf(stderr, "%s: %d:%d-%d\n", loc.file->name, fline, fcol, lcol - 1);
+        while(curr_line_ind < fline + loc.file->line_offset && curr_line) {
             curr_line = curr_line->next;
             curr_line_ind++;
         }
@@ -36,30 +36,30 @@ void log_location(YYLTYPE loc) {
             for(i = 1; i < fcol; i++) {
                 fprintf(stderr, " ");
             }
-            fprintf(stderr, "\e[31m^");
-            for(i = fcol + 1; i < lcol; i++) {
+            fprintf(stderr, "\e[31m");
+            for(i = fcol; i < lcol; i++) {
                 fprintf(stderr, "~");
             }
             fprintf(stderr, "\e[m\n");
         }
     } else {
-        fprintf(stderr, "%s: %d:%d-%d:%d\n", filename, fline, fcol, lline, lcol - 1);
+        fprintf(stderr, "%s: %d:%d-%d:%d\n", loc.file->name, fline, fcol, lline, lcol - 1);
     }
 }
 
-void log_error(const char *msg, YYLTYPE loc) {
+void log_error(const char *msg, location loc) {
     fprintf(stderr, "\e[31mError: %s\e[m\n", msg);
     errors++;
     log_location(loc);
 }
 
-void log_warning(const char *msg, YYLTYPE loc) {
+void log_warning(const char *msg, location loc) {
     fprintf(stderr, "\e[33mWarning: %s\e[m\n", msg);
     warnings++;
     log_location(loc);
 }
 
-void log_note(const char *msg, YYLTYPE loc) {
+void log_note(const char *msg, location loc) {
     fprintf(stderr, "\e[32mNote: %s\e[m\n", msg);
     log_location(loc);
 }
