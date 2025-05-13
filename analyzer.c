@@ -135,15 +135,15 @@ void resolve_symbols_expr(ast_prog *prog, ast_expr *expr) {
         if(symbol) {
             free(expr->pointed.data);
             switch(symbol->vnt) {
-            case AST_SYMBOL_FUNC: // can only be called (for later)
+            case AST_SYMBOL_FUNC:
                 expr->pointed_vnt = AST_SYMBOL_FUNC;
                 expr->pointed.func = symbol->pointed.func;
                 expr->is_const = false;
                 break;
-            case AST_SYMBOL_STRUCT: // can only access fields (for later)
+            case AST_SYMBOL_STRUCT:
                 expr->pointed_vnt = AST_SYMBOL_STRUCT;
                 expr->pointed.strct = symbol->pointed.strct;
-                expr->is_const = false; // temp ; Self(1, 2) -> true ; Self.dupa(1, 2) -> false
+                expr->is_const = false;
                 break;
             case AST_SYMBOL_VAR:
                 expr->pointed_vnt = AST_SYMBOL_VAR;
@@ -151,9 +151,7 @@ void resolve_symbols_expr(ast_prog *prog, ast_expr *expr) {
                 expr->is_const = false;
                 break;
             case AST_SYMBOL_UNRESOLVED:
-                if(errors == 0) {
-                    panic("unresolved symbol in symbol stack");
-                }
+                panic("unresolved symbol in symbol stack");
                 break;
             }
         } else {
@@ -180,36 +178,7 @@ void resolve_symbols_expr(ast_prog *prog, ast_expr *expr) {
         break;
     case AST_EXPR_DOT:
         resolve_symbols_expr(prog, expr->lhs);
-        switch(expr->lhs->pointed_vnt) {
-        case AST_SYMBOL_FUNC:
-            log_error("functions have no members", expr->loc);
-            break;
-        case AST_SYMBOL_STRUCT:
-            found = false;
-            func = expr->lhs->pointed.strct->funcs;
-            while(func) {
-                if(strcmp(func->name, expr->pointed.data) == 0) {
-                    free(expr->pointed.data);
-                    expr->pointed_vnt = AST_SYMBOL_FUNC;
-                    expr->pointed.func = func;
-                    found = true;
-                    break;
-                }
-                func = func->next;
-            }
-            if(!found) {
-                log_error("associated function not found", expr->loc);
-            }
-            break;
-        case AST_SYMBOL_VAR: // leave for type checker
-            break;
-        case AST_SYMBOL_UNRESOLVED:
-            if(errors == 0) {
-                panic("symbol resolved to unresolved symbol");
-            }
-            break;
-        }
-        expr->is_const = false; // temp ; if have type consts ; only if lhs IS struct
+        expr->is_const = false;
         break;
     case AST_OP_CALL:
         resolve_symbols_expr(prog, expr->lhs);
