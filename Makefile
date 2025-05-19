@@ -4,12 +4,18 @@ ldflags := -lasan -lubsan
 #ldflags :=
 
 .PHONY: make
-make: build gnpc
+make: build out out/gnpc out/prelude.o
 
 build:
 	mkdir build
 
-gnpc: build/scanner.o build/parser.o build/main.o build/ast.o build/lines.o build/error.o build/analyzer.o build/type_checker.o
+out:
+	mkdir out
+
+out/prelude.o: prelude.s
+	as -o $@ $<
+
+out/gnpc: build/scanner.o build/parser.o build/main.o build/ast.o build/lines.o build/error.o build/analyzer.o build/type_checker.o build/generator.o
 	gcc $(ldflags) -o $@ $^
 
 build/main.o: main.c ast.h print_ast.c lines.h error.h analyzer.h
@@ -22,6 +28,9 @@ build/analyzer.o: analyzer.c analyzer.h ast.h error.h type_checker.h
 	gcc $(cflags) -c -o $@ $<
 
 build/type_checker.o: type_checker.c ast.h error.h
+	gcc $(cflags) -c -o $@ $<
+
+build/generator.o: generator.c ast.h
 	gcc $(cflags) -c -o $@ $<
 
 build/lines.o: lines.c lines.h

@@ -1,4 +1,3 @@
 build/
-gnpc
-*.gnp
+out/
 test/

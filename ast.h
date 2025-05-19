@@ -2,18 +2,8 @@
 #define AST_H
 
 #include <stdbool.h>
+#include <stdint.h>
 #include "lines.h"
-
-//typedef struct YYLTYPE YYLTYPE;
-//struct YYLTYPE
-//{
-//  int first_line;
-//  int first_column;
-//  int last_line;
-//  int last_column;
-//};
-//# define YYLTYPE_IS_DECLARED 1
-//# define YYLTYPE_IS_TRIVIAL 1
 
 // typedefs
 
@@ -57,6 +47,8 @@ typedef struct ast_func {
 typedef struct ast_struct {
     location loc;
     char *name;
+    int size;
+    int algn;
     struct ast_var *fields;
     struct ast_func *funcs;
     struct ast_struct *next;
@@ -74,6 +66,7 @@ typedef struct ast_var {
     char *name;
     struct ast_type *type;
     struct ast_expr *expr;
+    bool is_global;
     struct ast_var *next;
 } ast_var;
 
@@ -176,10 +169,12 @@ typedef struct ast_expr {
     enum ast_symbol_vnt pointed_vnt;
     union {
         char *data;
+        uint64_t value;
         ast_func *func;
         ast_struct *strct;
         ast_var *var;
     } pointed;
+    struct ast_type *type;
     struct ast_expr *lhs;
     struct ast_expr *rhs;
     bool is_const;
@@ -211,6 +206,7 @@ ast_var *ast_var_create(location, char *, ast_type *, ast_expr *);
 void ast_type_append(ast_type **, ast_type *);
 void ast_type_free(ast_type *);
 ast_type *ast_type_create(location, char *);
+ast_type *ast_type_make_base(location, ast_struct *);
 ast_type *ast_type_make_ref(location, ast_type *);
 ast_type *ast_type_make_arr(location, ast_type *, ast_expr *);
 ast_type *ast_type_make_slice(location, ast_type *);

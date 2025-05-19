@@ -1,30 +1,71 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include "analyzer.h"
 #include "type_checker.h"
 #include "ast.h"
 #include "error.h"
 
-// temp
+// TODO remove
 #include <stdio.h>
 
 struct location default_loc = {0};
 
 void generate_base_types(ast_prog *prog) {
-    ast_struct_append(&prog->structs, ast_struct_create(default_loc, "void", NULL));
-    ast_struct_append(&prog->structs, ast_struct_create(default_loc, "char", NULL));
-    ast_struct_append(&prog->structs, ast_struct_create(default_loc, "bool", NULL));
-    ast_struct_append(&prog->structs, ast_struct_create(default_loc, "isize", NULL));
-    ast_struct_append(&prog->structs, ast_struct_create(default_loc, "usize", NULL));
-    ast_struct_append(&prog->structs, ast_struct_create(default_loc, "i8", NULL));
-    ast_struct_append(&prog->structs, ast_struct_create(default_loc, "u8", NULL));
-    ast_struct_append(&prog->structs, ast_struct_create(default_loc, "i16", NULL));
-    ast_struct_append(&prog->structs, ast_struct_create(default_loc, "u16", NULL));
-    ast_struct_append(&prog->structs, ast_struct_create(default_loc, "i32", NULL));
-    ast_struct_append(&prog->structs, ast_struct_create(default_loc, "u32", NULL));
-    ast_struct_append(&prog->structs, ast_struct_create(default_loc, "i64", NULL));
-    ast_struct_append(&prog->structs, ast_struct_create(default_loc, "u64", NULL));
+    ast_struct *strct;
+    strct = ast_struct_create(default_loc, "void", NULL);
+    strct->size = 0;
+    strct->algn = 0;
+    ast_struct_append(&prog->structs, strct);
+    strct = ast_struct_create(default_loc, "char", NULL);
+    strct->size = 1;
+    strct->algn = 1;
+    ast_struct_append(&prog->structs, strct);
+    strct = ast_struct_create(default_loc, "bool", NULL);
+    strct->size = 1;
+    strct->algn = 1;
+    ast_struct_append(&prog->structs, strct);
+    strct = ast_struct_create(default_loc, "isize", NULL);
+    strct->size = 8; // architecture specific
+    strct->algn = 8;
+    ast_struct_append(&prog->structs, strct);
+    strct = ast_struct_create(default_loc, "usize", NULL);
+    strct->size = 8; // architecture specific
+    strct->algn = 8;
+    ast_struct_append(&prog->structs, strct);
+    strct = ast_struct_create(default_loc, "i8", NULL);
+    strct->size = 1;
+    strct->algn = 1;
+    ast_struct_append(&prog->structs, strct);
+    strct = ast_struct_create(default_loc, "u8", NULL);
+    strct->size = 1;
+    strct->algn = 1;
+    ast_struct_append(&prog->structs, strct);
+    strct = ast_struct_create(default_loc, "i16", NULL);
+    strct->size = 2;
+    strct->algn = 2;
+    ast_struct_append(&prog->structs, strct);
+    strct = ast_struct_create(default_loc, "u16", NULL);
+    strct->size = 2;
+    strct->algn = 2;
+    ast_struct_append(&prog->structs, strct);
+    strct = ast_struct_create(default_loc, "i32", NULL);
+    strct->size = 4;
+    strct->algn = 4;
+    ast_struct_append(&prog->structs, strct);
+    strct = ast_struct_create(default_loc, "u32", NULL);
+    strct->size = 4;
+    strct->algn = 4;
+    ast_struct_append(&prog->structs, strct);
+    strct = ast_struct_create(default_loc, "i64", NULL);
+    strct->size = 8;
+    strct->algn = 8;
+    ast_struct_append(&prog->structs, strct);
+    strct = ast_struct_create(default_loc, "u64", NULL);
+    strct->size = 8;
+    strct->algn = 8;
+    ast_struct_append(&prog->structs, strct);
 }
 
 void generate_symbols(ast_prog *prog) {
@@ -54,6 +95,7 @@ void generate_symbols(ast_prog *prog) {
             log_error("symbol already defined", var->loc);
             log_note("here", old_symbol->loc);
         }
+        var->is_global = true;
         var = var->next;
     }
 }
@@ -123,12 +165,61 @@ void deduplicate_struct_fields(ast_prog *prog) {
     }
 }
 
+void resolve_symbols_num_lit(ast_prog *prog, ast_expr *expr) {
+    char *data = expr->pointed.data;
+    uint64_t val = 0;
+    uint64_t base = 10;
+    uint64_t digit;
+    int i = 0;
+
+    if(data[0] == '0') {
+        switch(data[1]) {
+        case 'x':
+            base = 16;
+            i = 2;
+            break;
+        case 'o':
+            base = 8;
+            i = 2;
+            break;
+        case 'b':
+            base = 2;
+            i = 2;
+            break;
+        default:
+            break;
+        }
+    }
+
+    for(; data[i]; i++) {
+        if('0' <= data[i] && data[i] <= '9') {
+            digit = data[i] - '0';
+        } else if('a' <= data[i] && data[i] <= 'f') {
+            digit = data[i] - 'a' + 10;
+        } else if('A' <= data[i] && data[i] <= 'F') {
+            digit = data[i] - 'A' + 10;
+        } else if(data[i] == '_') {
+            continue;
+        } else if(data[i] == 'i' || data[i] == 'u') {
+            expr->type = ast_type_make_base(default_loc, ast_symbol_find(prog, &data[i])->pointed.strct);
+            break;
+        } else {
+            panic("invalid digit in number literal");
+        }
+        val *= base;
+        val += digit;
+    }
+    if(!expr->type) {
+        expr->type = ast_type_make_base(default_loc, ast_symbol_find(prog, "i32")->pointed.strct);
+    }
+    free(data);
+    expr->pointed.value = val;
+}
+
 void resolve_symbols_expr(ast_prog *prog, ast_expr *expr) {
     ast_expr *subexpr;
     ast_symbol *symbol;
-    ast_func *func;
     bool is_const;
-    bool found;
     switch(expr->vnt) {
     case AST_EXPR_IDENT:
         symbol = ast_symbol_find(prog, expr->pointed.data);
@@ -138,17 +229,14 @@ void resolve_symbols_expr(ast_prog *prog, ast_expr *expr) {
             case AST_SYMBOL_FUNC:
                 expr->pointed_vnt = AST_SYMBOL_FUNC;
                 expr->pointed.func = symbol->pointed.func;
-                expr->is_const = false;
                 break;
             case AST_SYMBOL_STRUCT:
                 expr->pointed_vnt = AST_SYMBOL_STRUCT;
                 expr->pointed.strct = symbol->pointed.strct;
-                expr->is_const = false;
                 break;
             case AST_SYMBOL_VAR:
                 expr->pointed_vnt = AST_SYMBOL_VAR;
                 expr->pointed.var = symbol->pointed.var;
-                expr->is_const = false;
                 break;
             case AST_SYMBOL_UNRESOLVED:
                 panic("unresolved symbol in symbol stack");
@@ -157,13 +245,35 @@ void resolve_symbols_expr(ast_prog *prog, ast_expr *expr) {
         } else {
             log_error("unknown symbol", expr->loc);
         }
+        expr->is_const = false;
+        break;
+    case AST_EXPR_CHAR_LIT:
+        // TODO calc value
+        expr->type = ast_type_make_base(default_loc, ast_symbol_find(prog, "char")->pointed.strct);
+        expr->is_const = true;
+        break;
+    case AST_EXPR_STR_LIT:
+        // TODO add to str list
+        expr->type = ast_type_make_ref(default_loc, ast_type_make_slice(default_loc, ast_type_make_base(default_loc, ast_symbol_find(prog, "char")->pointed.strct)));
+        expr->is_const = true;
         break;
     case AST_EXPR_NUM_LIT:
-    case AST_EXPR_STR_LIT:
-    case AST_EXPR_CHAR_LIT:
+        resolve_symbols_num_lit(prog, expr);
+        expr->is_const = true;
+        break;
     case AST_EXPR_TRUE:
+        expr->pointed.value = 1;
+        expr->type = ast_type_make_base(default_loc, ast_symbol_find(prog, "bool")->pointed.strct);
+        expr->is_const = true;
+        break;
     case AST_EXPR_FALSE:
+        expr->pointed.value = 0;
+        expr->type = ast_type_make_base(default_loc, ast_symbol_find(prog, "bool")->pointed.strct);
+        expr->is_const = true;
+        break;
     case AST_EXPR_NULL:
+        expr->pointed.value = 0;
+        expr->type = ast_type_make_ref(default_loc, ast_type_make_base(default_loc, ast_symbol_find(prog, "void")->pointed.strct));
         expr->is_const = true;
         break;
     case AST_EXPR_TUPLE:
@@ -235,6 +345,33 @@ void resolve_symbols_expr(ast_prog *prog, ast_expr *expr) {
     }
 }
 
+void resolve_symbols_type(ast_prog *prog, ast_type *type) {
+    switch(type->vnt) {
+    case AST_TYPE_BASE:
+        break;
+    case AST_TYPE_REF:
+        resolve_symbols_type(prog, type->subtype);
+        break;
+    case AST_TYPE_ARR:
+        resolve_symbols_expr(prog, type->arrlen);
+        if(!type->arrlen->is_const) {
+            log_error("value not known at compile time", type->arrlen->loc);
+        }
+        resolve_symbols_type(prog, type->subtype);
+        break;
+    case AST_TYPE_SLICE:
+        resolve_symbols_type(prog, type->subtype);
+        break;
+    case AST_TYPE_TUPLE:
+        type = type->subtype;
+        while(type) {
+            resolve_symbols_type(prog, type);
+            type = type->next;
+        }
+        break;
+    }
+}
+
 void resolve_symbols_stmts(ast_prog *prog, ast_stmt *stmt, int scope) {
     ast_stmt *els;
     ast_symbol *old_symbol;
@@ -244,6 +381,9 @@ void resolve_symbols_stmts(ast_prog *prog, ast_stmt *stmt, int scope) {
         case AST_STMT_CONTINUE:
             break;
         case AST_STMT_VAR:
+            if(stmt->var->type) {
+                resolve_symbols_type(prog, stmt->var->type);
+            }
             if(stmt->var->expr) {
                 resolve_symbols_expr(prog, stmt->var->expr);
             }
@@ -299,6 +439,7 @@ void resolve_symbols_func(ast_prog *prog, ast_func *func) {
             log_error("argument already defined", arg->loc);
             log_note("here", old_symbol->loc);
         }
+        resolve_symbols_type(prog, arg->type);
         arg = arg->next;
     }
     resolve_symbols_stmts(prog, func->body, 2);
@@ -331,8 +472,7 @@ void resolve_symbols(ast_prog *prog) {
     }
 }
 
-void simplify_consts(ast_prog *prog) {
-    // no simplification for now, just check
+void check_consts(ast_prog *prog) {
     ast_var *var = prog->vars;
     while(var) {
         if(var->expr && !var->expr->is_const) {
@@ -469,6 +609,6 @@ void analyze_ast(ast_prog *prog) {
     if(errors) return;
     type_check(prog);
     if(errors) return;
-    simplify_consts(prog);
+    check_consts(prog);
     if(errors) return;
 }

@@ -5,5 +5,4 @@
 #include "error.h"
 
 void type_check(ast_prog *prog) {
-    printf("type checking c:\n");
 }

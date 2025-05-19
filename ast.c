@@ -60,6 +60,8 @@ ast_struct *ast_struct_create(location loc, char *name, ast_var *fields) {
     ast_struct *ret = malloc(sizeof(ast_struct));
     ret->loc = loc;
     ret->name = name;
+    ret->size = -1;
+    ret->algn = -1;
     ret->fields = fields;
     ret->funcs = NULL;
     ret->next = NULL;
@@ -118,6 +120,7 @@ ast_var *ast_var_create(location loc, char *name, ast_type *type, ast_expr *expr
     ret->name = name;
     ret->type = type;
     ret->expr = expr;
+    ret->is_global = false;
     ret->next = NULL;
     return ret;
 }
@@ -138,8 +141,11 @@ void ast_type_free(ast_type *type) {
                 free(type->pointed.name);
             }
             break;
-        case AST_TYPE_REF:
         case AST_TYPE_ARR:
+            ast_expr_free(type->arrlen);
+            ast_type_free(type->subtype);
+            break;
+        case AST_TYPE_REF:
         case AST_TYPE_SLICE:
         case AST_TYPE_TUPLE:
             ast_type_free(type->subtype);
@@ -157,6 +163,16 @@ ast_type *ast_type_create(location loc, char *name) {
     ret->vnt = AST_TYPE_BASE;
     ret->pointed_vnt = AST_SYMBOL_UNRESOLVED;
     ret->pointed.name = name;
+    ret->next = NULL;
+    return ret;
+}
+
+ast_type *ast_type_make_base(location loc, ast_struct *strct) {
+    ast_type *ret = malloc(sizeof(ast_type));
+    ret->loc = loc;
+    ret->vnt = AST_TYPE_BASE;
+    ret->pointed_vnt = AST_SYMBOL_STRUCT;
+    ret->pointed.strct = strct;
     ret->next = NULL;
     return ret;
 }
@@ -271,6 +287,7 @@ void ast_expr_append(ast_expr **head, ast_expr *expr) {
 void ast_expr_free(ast_expr *expr) {
     ast_expr *next;
     while(expr) {
+        ast_type_free(expr->type);
         switch(expr->vnt) {
         case AST_EXPR_IDENT:
             if(expr->pointed_vnt == AST_SYMBOL_UNRESOLVED) {
@@ -324,6 +341,7 @@ ast_expr *ast_expr_create(location loc, ast_expr_vnt vnt, char *data) {
     ret->vnt = vnt;
     ret->pointed_vnt = AST_SYMBOL_UNRESOLVED;
     ret->pointed.data = data;
+    ret->type = NULL;
     ret->next = NULL;
     return ret;
 }
@@ -333,6 +351,7 @@ ast_expr *ast_expr_make_tuple(location loc, ast_expr *exprs) {
     ret->loc = loc;
     ret->vnt = AST_EXPR_TUPLE;
     ret->rhs = exprs;
+    ret->type = NULL;
     ret->next = NULL;
     return ret;
 }
@@ -344,6 +363,7 @@ ast_expr *ast_expr_make_dot(location loc, ast_expr *expr, char *data) {
     ret->lhs = expr;
     ret->pointed_vnt = AST_SYMBOL_UNRESOLVED;
     ret->pointed.data = data;
+    ret->type = NULL;
     ret->next = NULL;
     return ret;
 }
@@ -354,6 +374,7 @@ ast_expr *ast_expr_make_op(location loc, ast_expr_vnt vnt, ast_expr *lhs, ast_ex
     ret->vnt = vnt;
     ret->lhs = lhs;
     ret->rhs = rhs;
+    ret->type = NULL;
     ret->next = NULL;
     return ret;
 }
