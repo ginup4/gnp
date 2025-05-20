@@ -467,16 +467,9 @@ void resolve_symbols(ast_prog *prog) {
     while(var) {
         if(var->expr) {
             resolve_symbols_expr(prog, var->expr);
-        }
-        var = var->next;
-    }
-}
-
-void check_consts(ast_prog *prog) {
-    ast_var *var = prog->vars;
-    while(var) {
-        if(var->expr && !var->expr->is_const) {
-            log_error("value not known at compile time", var->expr->loc);
+            if(!var->expr->is_const) {
+                log_error("value not known at compile time", var->expr->loc);
+            }
         }
         var = var->next;
     }
@@ -608,7 +601,5 @@ void analyze_ast(ast_prog *prog) {
     ast_symbol_pop(prog, 0);
     if(errors) return;
     type_check(prog);
-    if(errors) return;
-    check_consts(prog);
     if(errors) return;
 }
