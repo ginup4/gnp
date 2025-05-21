@@ -18,7 +18,7 @@ out/prelude.o: prelude.s
 out/gnpc: build/scanner.o build/parser.o build/main.o build/ast.o build/lines.o build/error.o build/analyzer.o build/type_checker.o build/generator.o
 	gcc $(ldflags) -o $@ $^
 
-build/main.o: main.c ast.h print_ast.c lines.h error.h analyzer.h
+build/main.o: main.c ast.h lines.h error.h analyzer.h
 	gcc $(cflags) -c -o $@ $<
 
 build/ast.o: ast.c ast.h
