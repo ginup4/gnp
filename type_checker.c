@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdbool.h>
+#include <string.h>
 #include "type_checker.h"
 #include "analyzer.h"
 #include "ast.h"
@@ -78,8 +79,10 @@ ast_type *type_copy(ast_type *type) {
     return ret;
 }
 
-void type_check_expr(ast_expr *expr) {
+void type_check_expr(ast_expr *expr, bool cannull) {
     //ast_expr *subexpr;
+    ast_func *method;
+    ast_var *field;
     ast_type *type;
     switch(expr->vnt) {
     case AST_EXPR_IDENT:
@@ -88,6 +91,7 @@ void type_check_expr(ast_expr *expr) {
             expr->type = type_copy(expr->pointed.var->type);
             break;
         default:
+            expr->type = NULL; // probalby not necessary
             break; // func and struct dont have type
         }
         break;
@@ -99,25 +103,93 @@ void type_check_expr(ast_expr *expr) {
     case AST_EXPR_NULL:
         break; // type already set
     case AST_EXPR_DOT:
-        panic("dot not implemented");
+        type_check_expr(expr->lhs, true);
+        if(!expr->lhs->type) {
+            if(expr->lhs->vnt == AST_EXPR_IDENT && expr->lhs->pointed_vnt == AST_SYMBOL_STRUCT) {
+                method = expr->lhs->pointed.strct->funcs;
+                while(method) {
+                    if(strcmp(expr->pointed.data, method->name) == 0) {
+                        break;
+                    }
+                    method = method->next;
+                }
+                if(method) {
+                    free(expr->pointed.data);
+                    expr->pointed_vnt = AST_SYMBOL_FUNC;
+                    expr->pointed.func = method;
+                    expr->type = NULL;
+                } else {
+                    log_error("associated function not found", expr->loc);
+                    exit(EXIT_FAILURE);
+                }
+            } else {
+                log_error("funtions don't have fields", expr->loc);
+                exit(EXIT_FAILURE);
+            }
+        } else {
+            type = expr->lhs->type;
+            if(type->vnt == AST_TYPE_REF) {
+                type = type->subtype;
+            }
+            if(type->vnt != AST_TYPE_BASE) {
+                log_error("not a struct", expr->lhs->loc);
+                exit(EXIT_FAILURE);
+            }
+            if(type->pointed_vnt != AST_SYMBOL_STRUCT) {
+                panic("unresolved type"); // temp
+            }
+            method = type->pointed.strct->funcs;
+            while(method) {
+                if(strcmp(expr->pointed.data, method->name) == 0) {
+                    break;
+                }
+                method = method->next;
+            }
+            if(method) {
+                free(expr->pointed.data);
+                expr->pointed_vnt = AST_SYMBOL_FUNC;
+                expr->pointed.func = method;
+                expr->type = NULL;
+            } else {
+                field = type->pointed.strct->fields;
+                while(field) {
+                    if(strcmp(expr->pointed.data, field->name) == 0) {
+                        break;
+                    }
+                    field = field->next;
+                }
+                if(field) {
+                    free(expr->pointed.data);
+                    expr->pointed_vnt = AST_SYMBOL_VAR;
+                    expr->pointed.var = field;
+                    expr->type = type_copy(field->type);
+                }
+            }
+        }
         break;
     case AST_EXPR_TUPLE:
         panic("tuple not implemented");
         break;
-    case AST_OP_CALL:
+    case AST_OP_CALL: // TODO check parameter types
+        type_check_expr(expr->lhs, true);
         if(expr->lhs->vnt == AST_EXPR_IDENT && expr->lhs->pointed_vnt == AST_SYMBOL_STRUCT) {
             expr->type = ast_type_make_base(default_loc, expr->lhs->pointed.strct);
         } else if(expr->lhs->vnt == AST_EXPR_IDENT && expr->lhs->pointed_vnt == AST_SYMBOL_FUNC) {
             expr->type = type_copy(expr->lhs->pointed.func->type);
-        } else if(expr->lhs->vnt == AST_EXPR_DOT) {
-            panic("method call not implemented");
+        } else if(expr->lhs->vnt == AST_EXPR_DOT && expr->lhs->pointed_vnt == AST_SYMBOL_FUNC) {
+            if(expr->lhs->lhs->vnt == AST_EXPR_IDENT && expr->lhs->lhs->pointed_vnt == AST_SYMBOL_STRUCT) {
+                expr->type = type_copy(expr->lhs->pointed.func->type);
+            } else {
+                expr->type = type_copy(expr->lhs->pointed.func->type); // TODO put self as first parameter
+            }
         } else {
-            panic("unreachable");
+            log_error("not a method", expr->lhs->loc);
+            exit(EXIT_FAILURE);
         }
         break;
     case AST_OP_INDEX:
-        type_check_expr(expr->lhs);
-        type_check_expr(expr->rhs);
+        type_check_expr(expr->lhs, false);
+        type_check_expr(expr->rhs, false);
         type = expr->lhs->type;
         if(type->vnt == AST_TYPE_REF) {
             type = type->subtype;
@@ -134,9 +206,9 @@ void type_check_expr(ast_expr *expr) {
         }
         break;
     case AST_OP_ASGN:
-        type_check_expr(expr->lhs);
+        type_check_expr(expr->lhs, false);
         // TODO only if assignable
-        type_check_expr(expr->rhs);
+        type_check_expr(expr->rhs, false);
         if(!type_cmp(expr->lhs->type, expr->rhs->type)) {
             log_error("mismatched types", expr->loc);
             exit(EXIT_FAILURE);
@@ -151,9 +223,9 @@ void type_check_expr(ast_expr *expr) {
     case AST_OP_OR_ASGN:
     case AST_OP_AND_ASGN:
     case AST_OP_XOR_ASGN:
-        type_check_expr(expr->lhs);
+        type_check_expr(expr->lhs, false);
         // TODO only if assignable
-        type_check_expr(expr->rhs);
+        type_check_expr(expr->rhs, false);
         if(!type_cmp(expr->lhs->type, expr->rhs->type)) {
             log_error("mismatched types", expr->loc);
             exit(EXIT_FAILURE);
@@ -167,8 +239,8 @@ void type_check_expr(ast_expr *expr) {
         break;
     case AST_OP_COMP_EQ:
     case AST_OP_COMP_NE:
-        type_check_expr(expr->lhs);
-        type_check_expr(expr->rhs);
+        type_check_expr(expr->lhs, false);
+        type_check_expr(expr->rhs, false);
         if(!type_cmp(expr->lhs->type, expr->rhs->type)) {
             log_error("mismatched types", expr->loc);
             exit(EXIT_FAILURE);
@@ -179,8 +251,8 @@ void type_check_expr(ast_expr *expr) {
     case AST_OP_COMP_GE:
     case AST_OP_COMP_LT:
     case AST_OP_COMP_GT:
-        type_check_expr(expr->lhs);
-        type_check_expr(expr->rhs);
+        type_check_expr(expr->lhs, false);
+        type_check_expr(expr->rhs, false);
         if(!type_cmp(expr->lhs->type, expr->rhs->type)) {
             log_error("mismatched types", expr->loc);
             exit(EXIT_FAILURE);
@@ -193,8 +265,8 @@ void type_check_expr(ast_expr *expr) {
         break;
     case AST_OP_LOG_OR:
     case AST_OP_LOG_AND:
-        type_check_expr(expr->lhs);
-        type_check_expr(expr->rhs);
+        type_check_expr(expr->lhs, false);
+        type_check_expr(expr->rhs, false);
         if(expr->rhs->type->vnt != AST_TYPE_BASE || expr->rhs->type->pointed.strct != glob_struct_bool) {
             log_error("not a bool", expr->rhs->loc);
             exit(EXIT_FAILURE);
@@ -206,7 +278,7 @@ void type_check_expr(ast_expr *expr) {
         expr->type = ast_type_make_base(default_loc, glob_struct_bool);
         break;
     case AST_OP_LOG_NOT:
-        type_check_expr(expr->rhs);
+        type_check_expr(expr->rhs, false);
         if(expr->rhs->type->vnt != AST_TYPE_BASE || expr->rhs->type->pointed.strct != glob_struct_bool) {
             log_error("not a bool", expr->rhs->loc);
             exit(EXIT_FAILURE);
@@ -221,8 +293,8 @@ void type_check_expr(ast_expr *expr) {
     case AST_OP_MUL:
     case AST_OP_DIV:
     case AST_OP_MOD:
-        type_check_expr(expr->lhs);
-        type_check_expr(expr->rhs);
+        type_check_expr(expr->lhs, false);
+        type_check_expr(expr->rhs, false);
         if(!type_cmp(expr->lhs->type, expr->rhs->type)) {
             log_error("mismatched types", expr->loc);
             exit(EXIT_FAILURE);
@@ -234,7 +306,7 @@ void type_check_expr(ast_expr *expr) {
         expr->type = type_copy(expr->lhs->type);
         break;
     case AST_OP_NEG:
-        type_check_expr(expr->rhs);
+        type_check_expr(expr->rhs, false);
         if(expr->rhs->type->vnt != AST_TYPE_BASE || !expr->rhs->type->pointed.strct->numeric) {
             log_error("nonnumeric type", expr->rhs->loc);
             exit(EXIT_FAILURE);
@@ -242,12 +314,12 @@ void type_check_expr(ast_expr *expr) {
         expr->type = type_copy(expr->rhs->type);
         break;
     case AST_OP_REF:
-        type_check_expr(expr->rhs);
+        type_check_expr(expr->rhs, false);
         // TODO only if assignable
         expr->type = ast_type_make_ref(default_loc, type_copy(expr->rhs->type));
         break;
     case AST_OP_DEREF:
-        type_check_expr(expr->rhs);
+        type_check_expr(expr->rhs, false);
         if(expr->rhs->type->vnt == AST_TYPE_REF) {
             expr->type = type_copy(expr->rhs->type->subtype);
         } else {
@@ -257,7 +329,7 @@ void type_check_expr(ast_expr *expr) {
         break;
     case AST_OP_INC:
     case AST_OP_DEC:
-        type_check_expr(expr->lhs);
+        type_check_expr(expr->lhs, false);
         // TODO only if assignable
         if(expr->lhs->type->vnt != AST_TYPE_BASE || !expr->lhs->type->pointed.strct->numeric) {
             log_error("nonnumeric type", expr->lhs->loc);
@@ -265,14 +337,31 @@ void type_check_expr(ast_expr *expr) {
         }
         expr->type = type_copy(expr->lhs->type);
         break;
+    case AST_OP_PUT:
+        type_check_expr(expr->rhs, false);
+        expr->type = ast_type_make_ref(default_loc, type_copy(expr->rhs->type));
+        break;
+    case AST_OP_TAKE:
+        type_check_expr(expr->rhs, false);
+        if(expr->rhs->type->vnt == AST_TYPE_REF) {
+            expr->type = type_copy(expr->rhs->type->subtype);
+        } else {
+            log_error("not a ref", expr->rhs->loc);
+            exit(EXIT_FAILURE);
+        }
+        break;
     default:
         panic("other expr, not implemented");
+    }
+    if(!cannull && expr->type == NULL) {
+        log_error("invalid expression", expr->loc);
+        exit(EXIT_FAILURE);
     }
 }
 
 void type_check_var(ast_var *var) {
     if(var->expr) {
-        type_check_expr(var->expr);
+        type_check_expr(var->expr, false);
         if(var->type) {
             if(!type_cmp(var->type, var->expr->type)) {
                 log_error("variable initialized with mismatched type", var->expr->loc);
@@ -295,7 +384,7 @@ void type_check_stmts(ast_type *functype, ast_stmt *stmt) {
             break;
         case AST_STMT_RETURN:
             if(stmt->expr) {
-                type_check_expr(stmt->expr);
+                type_check_expr(stmt->expr, false);
                 if(!type_cmp(stmt->expr->type, functype)) {
                     log_error("mismatched return type", stmt->expr->loc);
                 }
@@ -306,31 +395,33 @@ void type_check_stmts(ast_type *functype, ast_stmt *stmt) {
             }
             break;
         case AST_STMT_EXPR:
-            type_check_expr(stmt->expr);
+            type_check_expr(stmt->expr, false);
             break;
         case AST_STMT_FREE:
-            type_check_expr(stmt->expr);
-            // TODO only ref to slice
+            type_check_expr(stmt->expr, false);
+            if(stmt->expr->type->vnt != AST_TYPE_REF || stmt->expr->type->subtype->vnt != AST_TYPE_SLICE) {
+                log_error("not a slice ref", stmt->expr->loc);
+            }
             break;
         case AST_STMT_LOOP:
             type_check_stmts(functype, stmt->body);
             break;
         case AST_STMT_WHILE:
-            type_check_expr(stmt->expr);
+            type_check_expr(stmt->expr, false);
             if(stmt->expr->type->vnt != AST_TYPE_BASE || stmt->expr->type->pointed.strct != glob_struct_bool) {
                 log_error("not a bool", stmt->expr->loc);
             }
             type_check_stmts(functype, stmt->body);
             break;
         case AST_STMT_IF:
-            type_check_expr(stmt->expr);
+            type_check_expr(stmt->expr, false);
             if(stmt->expr->type->vnt != AST_TYPE_BASE || stmt->expr->type->pointed.strct != glob_struct_bool) {
                 log_error("not a bool", stmt->expr->loc);
             }
             type_check_stmts(functype, stmt->body);
             els = stmt->els;
             while(els && els->expr) {
-                type_check_expr(els->expr);
+                type_check_expr(els->expr, false);
                 if(els->expr->type->vnt != AST_TYPE_BASE || els->expr->type->pointed.strct != glob_struct_bool) {
                     log_error("not a bool", els->expr->loc);
                 }
@@ -358,5 +449,13 @@ void type_check(ast_prog *prog) {
         type_check_stmts(func->type, func->body);
         func = func->next;
     }
-    if(errors) return;
+    ast_struct *strct = prog->structs;
+    while(strct) {
+        func = strct->funcs;
+        while(func) {
+            type_check_stmts(func->type, func->body);
+            func = func->next;
+        }
+        strct = strct->next;
+    }
 }

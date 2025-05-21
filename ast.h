@@ -66,6 +66,7 @@ typedef struct ast_impl {
 typedef struct ast_var {
     location loc;
     char *name;
+    int offset;
     struct ast_type *type;
     struct ast_expr *expr;
     struct ast_var *next;

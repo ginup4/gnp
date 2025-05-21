@@ -121,6 +121,7 @@ ast_var *ast_var_create(location loc, char *name, ast_type *type, ast_expr *expr
     ast_var *ret = malloc(sizeof(ast_var));
     ret->loc = loc;
     ret->name = name;
+    ret->offset = -1;
     ret->type = type;
     ret->expr = expr;
     ret->next = NULL;

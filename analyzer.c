@@ -137,6 +137,7 @@ void attach_impls(ast_prog *prog) {
     ast_impl *impl;
     ast_func *func;
     ast_func **strct_func;
+    ast_var *field;
     while(prog->impls) {
         impl = prog->impls;
         prog->impls = impl->next;
@@ -157,6 +158,19 @@ void attach_impls(ast_prog *prog) {
             func = impl->funcs;
             impl->funcs = func->next;
             func->next = NULL;
+            field = strct->fields;
+            while(field) {
+                if(strcmp(func->name, field->name) == 0) {
+                    log_error("field with this name already exists", func->loc);
+                    log_note("here", field->loc);
+                    ast_func_free(func);
+                    break;
+                }
+                field = field->next;
+            }
+            if(field) {
+                continue;
+            }
             strct_func = &strct->funcs;
             while(*strct_func) {
                 if(strcmp(func->name, (*strct_func)->name) == 0) {
@@ -319,9 +333,6 @@ void resolve_symbols_expr(ast_prog *prog, ast_expr *expr) {
         is_const = true;
         while(subexpr) {
             resolve_symbols_expr(prog, subexpr);
-            if(subexpr->vnt == AST_EXPR_IDENT && subexpr->pointed_vnt != AST_SYMBOL_VAR) {
-                log_error("invalid use of struct or function", subexpr->loc);
-            }
             is_const = is_const && subexpr->is_const;
             subexpr = subexpr->next;
         }
@@ -329,22 +340,13 @@ void resolve_symbols_expr(ast_prog *prog, ast_expr *expr) {
         break;
     case AST_EXPR_DOT:
         resolve_symbols_expr(prog, expr->lhs);
-        if(expr->lhs->vnt == AST_EXPR_IDENT && expr->lhs->pointed_vnt == AST_SYMBOL_FUNC) {
-            log_error("functions don't have members", expr->lhs->loc);
-        }
         expr->is_const = false;
         break;
     case AST_OP_CALL:
         resolve_symbols_expr(prog, expr->lhs);
-        if(!((expr->lhs->vnt == AST_EXPR_IDENT && (expr->lhs->pointed_vnt == AST_SYMBOL_FUNC || expr->lhs->pointed_vnt == AST_SYMBOL_STRUCT)) || expr->lhs->vnt == AST_EXPR_DOT)) {
-            log_error("not a function", expr->lhs->loc);
-        }
         subexpr = expr->rhs;
         while(subexpr) {
             resolve_symbols_expr(prog, subexpr);
-            if(subexpr->vnt == AST_EXPR_IDENT && subexpr->pointed_vnt != AST_SYMBOL_VAR) {
-                log_error("invalid use of struct or function", subexpr->loc);
-            }
             subexpr = subexpr->next;
         }
         if(expr->lhs->vnt == AST_EXPR_IDENT && expr->lhs->pointed_vnt == AST_SYMBOL_STRUCT) {
@@ -355,22 +357,13 @@ void resolve_symbols_expr(ast_prog *prog, ast_expr *expr) {
         break;
     case AST_OP_INDEX:
         resolve_symbols_expr(prog, expr->lhs);
-        if(expr->lhs->vnt == AST_EXPR_IDENT && expr->lhs->pointed_vnt != AST_SYMBOL_VAR) {
-            log_error("invalid use of struct or function", expr->lhs->loc);
-        }
         resolve_symbols_expr(prog, expr->rhs);
-        if(expr->rhs->vnt == AST_EXPR_IDENT && expr->rhs->pointed_vnt != AST_SYMBOL_VAR) {
-            log_error("invalid use of struct or function", expr->rhs->loc);
-        }
         expr->is_const = false;
         break;
     case AST_OP_LOG_NOT:
     case AST_OP_BIT_NOT:
     case AST_OP_NEG:
         resolve_symbols_expr(prog, expr->rhs);
-        if(expr->rhs->vnt == AST_EXPR_IDENT && expr->rhs->pointed_vnt != AST_SYMBOL_VAR) {
-            log_error("invalid use of struct or function", expr->rhs->loc);
-        }
         expr->is_const = expr->rhs->is_const;
         break;
     case AST_OP_REF:
@@ -379,17 +372,11 @@ void resolve_symbols_expr(ast_prog *prog, ast_expr *expr) {
     case AST_OP_PUT:
     case AST_OP_TAKE:
         resolve_symbols_expr(prog, expr->rhs);
-        if(expr->rhs->vnt == AST_EXPR_IDENT && expr->rhs->pointed_vnt != AST_SYMBOL_VAR) {
-            log_error("invalid use of struct or function", expr->rhs->loc);
-        }
         expr->is_const = false;
         break;
     case AST_OP_INC:
     case AST_OP_DEC:
         resolve_symbols_expr(prog, expr->lhs);
-        if(expr->lhs->vnt == AST_EXPR_IDENT && expr->lhs->pointed_vnt != AST_SYMBOL_VAR) {
-            log_error("invalid use of struct or function", expr->lhs->loc);
-        }
         expr->is_const = false;
         break;
     case AST_OP_ASGN:
@@ -403,24 +390,12 @@ void resolve_symbols_expr(ast_prog *prog, ast_expr *expr) {
     case AST_OP_XOR_ASGN:
     case AST_OP_REALLOC:
         resolve_symbols_expr(prog, expr->lhs);
-        if(expr->lhs->vnt == AST_EXPR_IDENT && expr->lhs->pointed_vnt != AST_SYMBOL_VAR) {
-            log_error("invalid use of struct or function", expr->lhs->loc);
-        }
         resolve_symbols_expr(prog, expr->rhs);
-        if(expr->rhs->vnt == AST_EXPR_IDENT && expr->rhs->pointed_vnt != AST_SYMBOL_VAR) {
-            log_error("invalid use of struct or function", expr->rhs->loc);
-        }
         expr->is_const = false;
         break;
     default:
         resolve_symbols_expr(prog, expr->lhs);
-        if(expr->lhs->vnt == AST_EXPR_IDENT && expr->lhs->pointed_vnt != AST_SYMBOL_VAR) {
-            log_error("invalid use of struct or function", expr->lhs->loc);
-        }
         resolve_symbols_expr(prog, expr->rhs);
-        if(expr->rhs->vnt == AST_EXPR_IDENT && expr->rhs->pointed_vnt != AST_SYMBOL_VAR) {
-            log_error("invalid use of struct or function", expr->rhs->loc);
-        }
         expr->is_const = (expr->lhs->is_const && expr->rhs->is_const);
         break;
     }
