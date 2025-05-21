@@ -49,6 +49,8 @@ typedef struct ast_struct {
     char *name;
     int size;
     int algn;
+    bool numeric;
+    bool sign;
     struct ast_var *fields;
     struct ast_func *funcs;
     struct ast_struct *next;
@@ -66,7 +68,6 @@ typedef struct ast_var {
     char *name;
     struct ast_type *type;
     struct ast_expr *expr;
-    bool is_global;
     struct ast_var *next;
 } ast_var;
 
@@ -169,7 +170,8 @@ typedef struct ast_expr {
     enum ast_symbol_vnt pointed_vnt;
     union {
         char *data;
-        uint64_t value;
+        uint64_t uval;
+        uint64_t ival;
         ast_func *func;
         ast_struct *strct;
         ast_var *var;
@@ -226,5 +228,7 @@ ast_expr *ast_expr_make_op(location, ast_expr_vnt, ast_expr *, ast_expr *);
 ast_symbol *ast_symbol_push(ast_prog *, location, char *, ast_symbol_vnt, void *, int);
 ast_symbol *ast_symbol_find(ast_prog *, char *);
 void ast_symbol_pop(ast_prog *, int);
+
+extern location default_loc;
 
 #endif

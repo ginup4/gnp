@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdbool.h>
 #include "error.h"
 #include "ast.h"
 
@@ -62,6 +63,8 @@ ast_struct *ast_struct_create(location loc, char *name, ast_var *fields) {
     ret->name = name;
     ret->size = -1;
     ret->algn = -1;
+    ret->numeric = false;
+    ret->sign = false;
     ret->fields = fields;
     ret->funcs = NULL;
     ret->next = NULL;
@@ -120,7 +123,6 @@ ast_var *ast_var_create(location loc, char *name, ast_type *type, ast_expr *expr
     ret->name = name;
     ret->type = type;
     ret->expr = expr;
-    ret->is_global = false;
     ret->next = NULL;
     return ret;
 }
@@ -405,7 +407,7 @@ ast_symbol *ast_symbol_push(ast_prog *prog, location loc, char *name, ast_symbol
         symbol->pointed.var = pointed;
         break;
     case AST_SYMBOL_UNRESOLVED:
-        panic("resolving to unresolved symbol");
+        panic("pushing unresolved symbol");
         break;
     }
     symbol->scope = scope;
@@ -437,3 +439,5 @@ void ast_symbol_pop(ast_prog *prog, int scope) {
         free(symbol);
     }
 }
+
+location default_loc = {0};

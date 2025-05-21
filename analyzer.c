@@ -10,62 +10,95 @@
 // TODO remove
 #include <stdio.h>
 
-struct location default_loc = {0};
+ast_struct *glob_struct_void;
+ast_struct *glob_struct_char;
+ast_struct *glob_struct_bool;
+ast_struct *glob_struct_isize;
+ast_struct *glob_struct_usize;
+ast_struct *glob_struct_i8;
+ast_struct *glob_struct_u8;
+ast_struct *glob_struct_i16;
+ast_struct *glob_struct_u16;
+ast_struct *glob_struct_i32;
+ast_struct *glob_struct_u32;
+ast_struct *glob_struct_i64;
+ast_struct *glob_struct_u64;
 
 void generate_base_types(ast_prog *prog) {
-    ast_struct *strct;
-    strct = ast_struct_create(default_loc, "void", NULL);
-    strct->size = 0;
-    strct->algn = 0;
-    ast_struct_append(&prog->structs, strct);
-    strct = ast_struct_create(default_loc, "char", NULL);
-    strct->size = 1;
-    strct->algn = 1;
-    ast_struct_append(&prog->structs, strct);
-    strct = ast_struct_create(default_loc, "bool", NULL);
-    strct->size = 1;
-    strct->algn = 1;
-    ast_struct_append(&prog->structs, strct);
-    strct = ast_struct_create(default_loc, "isize", NULL);
-    strct->size = 8; // architecture specific
-    strct->algn = 8;
-    ast_struct_append(&prog->structs, strct);
-    strct = ast_struct_create(default_loc, "usize", NULL);
-    strct->size = 8; // architecture specific
-    strct->algn = 8;
-    ast_struct_append(&prog->structs, strct);
-    strct = ast_struct_create(default_loc, "i8", NULL);
-    strct->size = 1;
-    strct->algn = 1;
-    ast_struct_append(&prog->structs, strct);
-    strct = ast_struct_create(default_loc, "u8", NULL);
-    strct->size = 1;
-    strct->algn = 1;
-    ast_struct_append(&prog->structs, strct);
-    strct = ast_struct_create(default_loc, "i16", NULL);
-    strct->size = 2;
-    strct->algn = 2;
-    ast_struct_append(&prog->structs, strct);
-    strct = ast_struct_create(default_loc, "u16", NULL);
-    strct->size = 2;
-    strct->algn = 2;
-    ast_struct_append(&prog->structs, strct);
-    strct = ast_struct_create(default_loc, "i32", NULL);
-    strct->size = 4;
-    strct->algn = 4;
-    ast_struct_append(&prog->structs, strct);
-    strct = ast_struct_create(default_loc, "u32", NULL);
-    strct->size = 4;
-    strct->algn = 4;
-    ast_struct_append(&prog->structs, strct);
-    strct = ast_struct_create(default_loc, "i64", NULL);
-    strct->size = 8;
-    strct->algn = 8;
-    ast_struct_append(&prog->structs, strct);
-    strct = ast_struct_create(default_loc, "u64", NULL);
-    strct->size = 8;
-    strct->algn = 8;
-    ast_struct_append(&prog->structs, strct);
+    glob_struct_void = ast_struct_create(default_loc, "void", NULL);
+    glob_struct_void->size = 0;
+    glob_struct_void->algn = 0;
+    ast_struct_append(&prog->structs, glob_struct_void);
+    glob_struct_char = ast_struct_create(default_loc, "char", NULL);
+    glob_struct_char->size = 1;
+    glob_struct_char->algn = 1;
+    glob_struct_char->numeric = true;
+    glob_struct_char->sign = false;
+    ast_struct_append(&prog->structs, glob_struct_char);
+    glob_struct_bool = ast_struct_create(default_loc, "bool", NULL);
+    glob_struct_bool->size = 1;
+    glob_struct_bool->algn = 1;
+    ast_struct_append(&prog->structs, glob_struct_bool);
+    glob_struct_isize = ast_struct_create(default_loc, "isize", NULL);
+    glob_struct_isize->size = 8; // architecture specific
+    glob_struct_isize->algn = 8;
+    glob_struct_isize->numeric = true;
+    glob_struct_isize->sign = true;
+    ast_struct_append(&prog->structs, glob_struct_isize);
+    glob_struct_usize = ast_struct_create(default_loc, "usize", NULL);
+    glob_struct_usize->size = 8; // architecture specific
+    glob_struct_usize->algn = 8;
+    glob_struct_usize->numeric = true;
+    glob_struct_usize->sign = false;
+    ast_struct_append(&prog->structs, glob_struct_usize);
+    glob_struct_i8 = ast_struct_create(default_loc, "i8", NULL);
+    glob_struct_i8->size = 1;
+    glob_struct_i8->algn = 1;
+    glob_struct_i8->numeric = true;
+    glob_struct_i8->sign = true;
+    ast_struct_append(&prog->structs, glob_struct_i8);
+    glob_struct_u8 = ast_struct_create(default_loc, "u8", NULL);
+    glob_struct_u8->size = 1;
+    glob_struct_u8->algn = 1;
+    glob_struct_u8->numeric = true;
+    glob_struct_u8->sign = false;
+    ast_struct_append(&prog->structs, glob_struct_u8);
+    glob_struct_i16 = ast_struct_create(default_loc, "i16", NULL);
+    glob_struct_i16->size = 2;
+    glob_struct_i16->algn = 2;
+    glob_struct_i16->numeric = true;
+    glob_struct_i16->sign = true;
+    ast_struct_append(&prog->structs, glob_struct_i16);
+    glob_struct_u16 = ast_struct_create(default_loc, "u16", NULL);
+    glob_struct_u16->size = 2;
+    glob_struct_u16->algn = 2;
+    glob_struct_u16->numeric = true;
+    glob_struct_u16->sign = false;
+    ast_struct_append(&prog->structs, glob_struct_u16);
+    glob_struct_i32 = ast_struct_create(default_loc, "i32", NULL);
+    glob_struct_i32->size = 4;
+    glob_struct_i32->algn = 4;
+    glob_struct_i32->numeric = true;
+    glob_struct_i32->sign = true;
+    ast_struct_append(&prog->structs, glob_struct_i32);
+    glob_struct_u32 = ast_struct_create(default_loc, "u32", NULL);
+    glob_struct_u32->size = 4;
+    glob_struct_u32->algn = 4;
+    glob_struct_u32->numeric = true;
+    glob_struct_u32->sign = false;
+    ast_struct_append(&prog->structs, glob_struct_u32);
+    glob_struct_i64 = ast_struct_create(default_loc, "i64", NULL);
+    glob_struct_i64->size = 8;
+    glob_struct_i64->algn = 8;
+    glob_struct_i64->numeric = true;
+    glob_struct_i64->sign = true;
+    ast_struct_append(&prog->structs, glob_struct_i64);
+    glob_struct_u64 = ast_struct_create(default_loc, "u64", NULL);
+    glob_struct_u64->size = 8;
+    glob_struct_u64->algn = 8;
+    glob_struct_u64->numeric = true;
+    glob_struct_u64->sign = false;
+    ast_struct_append(&prog->structs, glob_struct_u64);
 }
 
 void generate_symbols(ast_prog *prog) {
@@ -95,7 +128,6 @@ void generate_symbols(ast_prog *prog) {
             log_error("symbol already defined", var->loc);
             log_note("here", old_symbol->loc);
         }
-        var->is_global = true;
         var = var->next;
     }
 }
@@ -201,6 +233,7 @@ void resolve_symbols_num_lit(ast_prog *prog, ast_expr *expr) {
         } else if(data[i] == '_') {
             continue;
         } else if(data[i] == 'i' || data[i] == 'u') {
+            // TODO dont search symbol
             expr->type = ast_type_make_base(default_loc, ast_symbol_find(prog, &data[i])->pointed.strct);
             break;
         } else {
@@ -210,10 +243,14 @@ void resolve_symbols_num_lit(ast_prog *prog, ast_expr *expr) {
         val += digit;
     }
     if(!expr->type) {
-        expr->type = ast_type_make_base(default_loc, ast_symbol_find(prog, "i32")->pointed.strct);
+        expr->type = ast_type_make_base(default_loc, glob_struct_i32);
     }
     free(data);
-    expr->pointed.value = val;
+    if(expr->type->pointed.strct->sign) {
+        expr->pointed.ival = val;
+    } else {
+        expr->pointed.uval = val;
+    }
 }
 
 void resolve_symbols_expr(ast_prog *prog, ast_expr *expr) {
@@ -244,17 +281,18 @@ void resolve_symbols_expr(ast_prog *prog, ast_expr *expr) {
             }
         } else {
             log_error("unknown symbol", expr->loc);
+            exit(EXIT_FAILURE);
         }
         expr->is_const = false;
         break;
     case AST_EXPR_CHAR_LIT:
         // TODO calc value
-        expr->type = ast_type_make_base(default_loc, ast_symbol_find(prog, "char")->pointed.strct);
+        expr->type = ast_type_make_base(default_loc, glob_struct_char);
         expr->is_const = true;
         break;
     case AST_EXPR_STR_LIT:
         // TODO add to str list
-        expr->type = ast_type_make_ref(default_loc, ast_type_make_slice(default_loc, ast_type_make_base(default_loc, ast_symbol_find(prog, "char")->pointed.strct)));
+        expr->type = ast_type_make_ref(default_loc, ast_type_make_slice(default_loc, ast_type_make_base(default_loc, glob_struct_char)));
         expr->is_const = true;
         break;
     case AST_EXPR_NUM_LIT:
@@ -262,18 +300,18 @@ void resolve_symbols_expr(ast_prog *prog, ast_expr *expr) {
         expr->is_const = true;
         break;
     case AST_EXPR_TRUE:
-        expr->pointed.value = 1;
-        expr->type = ast_type_make_base(default_loc, ast_symbol_find(prog, "bool")->pointed.strct);
+        expr->pointed.uval = 1;
+        expr->type = ast_type_make_base(default_loc, glob_struct_bool);
         expr->is_const = true;
         break;
     case AST_EXPR_FALSE:
-        expr->pointed.value = 0;
-        expr->type = ast_type_make_base(default_loc, ast_symbol_find(prog, "bool")->pointed.strct);
+        expr->pointed.uval = 0;
+        expr->type = ast_type_make_base(default_loc, glob_struct_bool);
         expr->is_const = true;
         break;
     case AST_EXPR_NULL:
-        expr->pointed.value = 0;
-        expr->type = ast_type_make_ref(default_loc, ast_type_make_base(default_loc, ast_symbol_find(prog, "void")->pointed.strct));
+        expr->pointed.uval = 0;
+        expr->type = ast_type_make_ref(default_loc, ast_type_make_base(default_loc, glob_struct_void));
         expr->is_const = true;
         break;
     case AST_EXPR_TUPLE:
@@ -281,6 +319,9 @@ void resolve_symbols_expr(ast_prog *prog, ast_expr *expr) {
         is_const = true;
         while(subexpr) {
             resolve_symbols_expr(prog, subexpr);
+            if(subexpr->vnt == AST_EXPR_IDENT && subexpr->pointed_vnt != AST_SYMBOL_VAR) {
+                log_error("invalid use of struct or function", subexpr->loc);
+            }
             is_const = is_const && subexpr->is_const;
             subexpr = subexpr->next;
         }
@@ -288,26 +329,48 @@ void resolve_symbols_expr(ast_prog *prog, ast_expr *expr) {
         break;
     case AST_EXPR_DOT:
         resolve_symbols_expr(prog, expr->lhs);
+        if(expr->lhs->vnt == AST_EXPR_IDENT && expr->lhs->pointed_vnt == AST_SYMBOL_FUNC) {
+            log_error("functions don't have members", expr->lhs->loc);
+        }
         expr->is_const = false;
         break;
     case AST_OP_CALL:
         resolve_symbols_expr(prog, expr->lhs);
+        if(!((expr->lhs->vnt == AST_EXPR_IDENT && (expr->lhs->pointed_vnt == AST_SYMBOL_FUNC || expr->lhs->pointed_vnt == AST_SYMBOL_STRUCT)) || expr->lhs->vnt == AST_EXPR_DOT)) {
+            log_error("not a function", expr->lhs->loc);
+        }
         subexpr = expr->rhs;
         while(subexpr) {
             resolve_symbols_expr(prog, subexpr);
+            if(subexpr->vnt == AST_EXPR_IDENT && subexpr->pointed_vnt != AST_SYMBOL_VAR) {
+                log_error("invalid use of struct or function", subexpr->loc);
+            }
             subexpr = subexpr->next;
         }
-        expr->is_const = false;
+        if(expr->lhs->vnt == AST_EXPR_IDENT && expr->lhs->pointed_vnt == AST_SYMBOL_STRUCT) {
+            expr->is_const = true;
+        } else {
+            expr->is_const = false;
+        }
         break;
     case AST_OP_INDEX:
         resolve_symbols_expr(prog, expr->lhs);
+        if(expr->lhs->vnt == AST_EXPR_IDENT && expr->lhs->pointed_vnt != AST_SYMBOL_VAR) {
+            log_error("invalid use of struct or function", expr->lhs->loc);
+        }
         resolve_symbols_expr(prog, expr->rhs);
+        if(expr->rhs->vnt == AST_EXPR_IDENT && expr->rhs->pointed_vnt != AST_SYMBOL_VAR) {
+            log_error("invalid use of struct or function", expr->rhs->loc);
+        }
         expr->is_const = false;
         break;
     case AST_OP_LOG_NOT:
     case AST_OP_BIT_NOT:
     case AST_OP_NEG:
         resolve_symbols_expr(prog, expr->rhs);
+        if(expr->rhs->vnt == AST_EXPR_IDENT && expr->rhs->pointed_vnt != AST_SYMBOL_VAR) {
+            log_error("invalid use of struct or function", expr->rhs->loc);
+        }
         expr->is_const = expr->rhs->is_const;
         break;
     case AST_OP_REF:
@@ -316,11 +379,17 @@ void resolve_symbols_expr(ast_prog *prog, ast_expr *expr) {
     case AST_OP_PUT:
     case AST_OP_TAKE:
         resolve_symbols_expr(prog, expr->rhs);
+        if(expr->rhs->vnt == AST_EXPR_IDENT && expr->rhs->pointed_vnt != AST_SYMBOL_VAR) {
+            log_error("invalid use of struct or function", expr->rhs->loc);
+        }
         expr->is_const = false;
         break;
     case AST_OP_INC:
     case AST_OP_DEC:
         resolve_symbols_expr(prog, expr->lhs);
+        if(expr->lhs->vnt == AST_EXPR_IDENT && expr->lhs->pointed_vnt != AST_SYMBOL_VAR) {
+            log_error("invalid use of struct or function", expr->lhs->loc);
+        }
         expr->is_const = false;
         break;
     case AST_OP_ASGN:
@@ -334,12 +403,24 @@ void resolve_symbols_expr(ast_prog *prog, ast_expr *expr) {
     case AST_OP_XOR_ASGN:
     case AST_OP_REALLOC:
         resolve_symbols_expr(prog, expr->lhs);
+        if(expr->lhs->vnt == AST_EXPR_IDENT && expr->lhs->pointed_vnt != AST_SYMBOL_VAR) {
+            log_error("invalid use of struct or function", expr->lhs->loc);
+        }
         resolve_symbols_expr(prog, expr->rhs);
+        if(expr->rhs->vnt == AST_EXPR_IDENT && expr->rhs->pointed_vnt != AST_SYMBOL_VAR) {
+            log_error("invalid use of struct or function", expr->rhs->loc);
+        }
         expr->is_const = false;
         break;
     default:
         resolve_symbols_expr(prog, expr->lhs);
+        if(expr->lhs->vnt == AST_EXPR_IDENT && expr->lhs->pointed_vnt != AST_SYMBOL_VAR) {
+            log_error("invalid use of struct or function", expr->lhs->loc);
+        }
         resolve_symbols_expr(prog, expr->rhs);
+        if(expr->rhs->vnt == AST_EXPR_IDENT && expr->rhs->pointed_vnt != AST_SYMBOL_VAR) {
+            log_error("invalid use of struct or function", expr->rhs->loc);
+        }
         expr->is_const = (expr->lhs->is_const && expr->rhs->is_const);
         break;
     }
@@ -423,6 +504,7 @@ void resolve_symbols_stmts(ast_prog *prog, ast_stmt *stmt, int scope) {
             if(old_symbol) {
                 log_error("variable already defined", stmt->var->loc);
                 log_note("here", old_symbol->loc);
+                exit(EXIT_FAILURE);
             }
         }
         stmt = stmt->next;
@@ -438,6 +520,7 @@ void resolve_symbols_func(ast_prog *prog, ast_func *func) {
         if(old_symbol) {
             log_error("argument already defined", arg->loc);
             log_note("here", old_symbol->loc);
+            exit(EXIT_FAILURE);
         }
         resolve_symbols_type(prog, arg->type);
         arg = arg->next;
@@ -483,9 +566,11 @@ void resolve_types_type(ast_prog *prog, ast_type *type) {
         symbol = ast_symbol_find(prog, type->pointed.name);
         if(symbol) {
             free(type->pointed.name);
+            type->pointed_vnt = AST_SYMBOL_STRUCT;
             type->pointed.strct = symbol->pointed.strct;
         } else {
             log_error("unknown type", type->loc);
+            exit(EXIT_FAILURE);
         }
         break;
     case AST_TYPE_REF:
@@ -541,13 +626,10 @@ void resolve_types_stmts(ast_prog *prog, ast_stmt *stmt) {
 }
 
 void resolve_types_func(ast_prog *prog, ast_func *func) {
-    ast_symbol *symbol;
     if(func->type) {
         resolve_types_type(prog, func->type);
     } else {
-        func->type = ast_type_create(func->loc, NULL);
-        symbol = ast_symbol_find(prog, "void");
-        func->type->pointed.strct = symbol->pointed.strct;
+        func->type = ast_type_make_base(default_loc, glob_struct_void);
     }
     ast_var *var = func->args;
     while(var) {

@@ -46,26 +46,26 @@ int main(int argc, char **argv) {
         return EXIT_FAILURE;
     }
 
-    FILE *file = fopen("/tmp/gnp_asm_out.s", "w");
-    if(!file) {
-        panic(strerror(errno));
-    }
+    //FILE *file = fopen("/tmp/gnp_asm_out.s", "w");
+    //if(!file) {
+    //    panic(strerror(errno));
+    //}
 
-    generate(file, &glob_program);
+    generate(stdout, &glob_program);
 
-    if(fclose(file)) {
-        panic(strerror(errno));
-    }
+    //if(fclose(file)) {
+    //    panic(strerror(errno));
+    //}
 
-    system("cat /tmp/gnp_asm_out.s"); // temp
+    //system("cat /tmp/gnp_asm_out.s"); // temp
 
-    if(system("as -o /tmp/gnp_obj_out.o /tmp/gnp_asm_out.s")) {
-        return EXIT_FAILURE;
-    }
+    //if(system("as -o /tmp/gnp_obj_out.o /tmp/gnp_asm_out.s")) {
+    //    return EXIT_FAILURE;
+    //}
 
-    if(system("ld -o out_gnp_prog -dynamic-linker /lib/ld-linux-x86-64.so.2 /usr/lib/crt1.o /usr/lib/crti.o -lc /tmp/gnp_obj_out.o /home/ginup4/Programming/c/gnp/out/prelude.o /usr/lib/crtn.o")) {
-        return EXIT_FAILURE;
-    }
+    //if(system("ld -o out_gnp_prog -dynamic-linker /lib/ld-linux-x86-64.so.2 /usr/lib/crt1.o /usr/lib/crti.o -lc /tmp/gnp_obj_out.o /home/ginup4/Programming/c/gnp/out/prelude.o /usr/lib/crtn.o")) {
+    //    return EXIT_FAILURE;
+    //}
 
     return EXIT_SUCCESS;
 }
