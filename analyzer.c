@@ -247,8 +247,29 @@ void resolve_symbols_num_lit(ast_prog *prog, ast_expr *expr) {
         } else if(data[i] == '_') {
             continue;
         } else if(data[i] == 'i' || data[i] == 'u') {
-            // TODO dont search symbol
-            expr->type = ast_type_make_base(default_loc, ast_symbol_find(prog, &data[i])->pointed.strct);
+            if(strcmp(&data[i], "isize") == 0) {
+                expr->type = ast_type_make_base(default_loc, glob_struct_isize);
+            } else if(strcmp(&data[i], "usize") == 0) {
+                expr->type = ast_type_make_base(default_loc, glob_struct_usize);
+            } else if(strcmp(&data[i], "i8") == 0) {
+                expr->type = ast_type_make_base(default_loc, glob_struct_usize);
+            } else if(strcmp(&data[i], "u8") == 0) {
+                expr->type = ast_type_make_base(default_loc, glob_struct_usize);
+            } else if(strcmp(&data[i], "i16") == 0) {
+                expr->type = ast_type_make_base(default_loc, glob_struct_usize);
+            } else if(strcmp(&data[i], "u16") == 0) {
+                expr->type = ast_type_make_base(default_loc, glob_struct_usize);
+            } else if(strcmp(&data[i], "i32") == 0) {
+                expr->type = ast_type_make_base(default_loc, glob_struct_usize);
+            } else if(strcmp(&data[i], "u32") == 0) {
+                expr->type = ast_type_make_base(default_loc, glob_struct_usize);
+            } else if(strcmp(&data[i], "i64") == 0) {
+                expr->type = ast_type_make_base(default_loc, glob_struct_usize);
+            } else if(strcmp(&data[i], "u64") == 0) {
+                expr->type = ast_type_make_base(default_loc, glob_struct_usize);
+            } else {
+                panic("invalid number lit type suffix");
+            }
             break;
         } else {
             panic("invalid digit in number literal");
@@ -256,11 +277,8 @@ void resolve_symbols_num_lit(ast_prog *prog, ast_expr *expr) {
         val *= base;
         val += digit;
     }
-    if(!expr->type) {
-        expr->type = ast_type_make_base(default_loc, glob_struct_i32);
-    }
     free(data);
-    if(expr->type->pointed.strct->sign) {
+    if(!expr->type || expr->type->pointed.strct->sign) {
         expr->pointed.ival = val;
     } else {
         expr->pointed.uval = val;
@@ -325,7 +343,6 @@ void resolve_symbols_expr(ast_prog *prog, ast_expr *expr) {
         break;
     case AST_EXPR_NULL:
         expr->pointed.uval = 0;
-        expr->type = ast_type_make_ref(default_loc, ast_type_make_base(default_loc, glob_struct_void));
         expr->is_const = true;
         break;
     case AST_EXPR_TUPLE:
