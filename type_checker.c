@@ -80,11 +80,15 @@ ast_type *type_copy(ast_type *type) {
 }
 
 void type_check_expr(ast_expr *expr, ast_type *request, bool cannull) {
-    //ast_expr *subexpr;
-    ast_func *method;
+    ast_expr *subexpr;
+    ast_func *func;
     ast_var *field;
     ast_type *type;
+    ast_var *args;
     ast_type temp_type;
+    if(expr->type) {
+        return;
+    }
     switch(expr->vnt) {
     case AST_EXPR_IDENT:
         switch(expr->pointed_vnt) {
@@ -92,8 +96,7 @@ void type_check_expr(ast_expr *expr, ast_type *request, bool cannull) {
             expr->type = type_copy(expr->pointed.var->type);
             break;
         default:
-            expr->type = NULL; // probalby not necessary
-            break; // func and struct dont have type
+            break;
         }
         break;
     case AST_EXPR_NUM_LIT:
@@ -109,7 +112,7 @@ void type_check_expr(ast_expr *expr, ast_type *request, bool cannull) {
     case AST_EXPR_CHAR_LIT:
     case AST_EXPR_TRUE:
     case AST_EXPR_FALSE:
-        break; // type already set
+        break;
     case AST_EXPR_NULL:
         if(request && request->vnt == AST_TYPE_REF) {
             expr->type = type_copy(request);
@@ -121,17 +124,17 @@ void type_check_expr(ast_expr *expr, ast_type *request, bool cannull) {
         type_check_expr(expr->lhs, NULL, true);
         if(!expr->lhs->type) {
             if(expr->lhs->vnt == AST_EXPR_IDENT && expr->lhs->pointed_vnt == AST_SYMBOL_STRUCT) {
-                method = expr->lhs->pointed.strct->funcs;
-                while(method) {
-                    if(strcmp(expr->pointed.data, method->name) == 0) {
+                func = expr->lhs->pointed.strct->funcs;
+                while(func) {
+                    if(strcmp(expr->pointed.data, func->name) == 0) {
                         break;
                     }
-                    method = method->next;
+                    func = func->next;
                 }
-                if(method) {
+                if(func) {
                     free(expr->pointed.data);
                     expr->pointed_vnt = AST_SYMBOL_FUNC;
-                    expr->pointed.func = method;
+                    expr->pointed.func = func;
                     expr->type = NULL;
                 } else {
                     log_error("associated function not found", expr->loc);
@@ -153,17 +156,17 @@ void type_check_expr(ast_expr *expr, ast_type *request, bool cannull) {
             if(type->pointed_vnt != AST_SYMBOL_STRUCT) {
                 panic("unresolved type"); // temp
             }
-            method = type->pointed.strct->funcs;
-            while(method) {
-                if(strcmp(expr->pointed.data, method->name) == 0) {
+            func = type->pointed.strct->funcs;
+            while(func) {
+                if(strcmp(expr->pointed.data, func->name) == 0) {
                     break;
                 }
-                method = method->next;
+                func = func->next;
             }
-            if(method) {
+            if(func) {
                 free(expr->pointed.data);
                 expr->pointed_vnt = AST_SYMBOL_FUNC;
-                expr->pointed.func = method;
+                expr->pointed.func = func;
                 expr->type = NULL;
             } else {
                 field = type->pointed.strct->fields;
@@ -188,21 +191,63 @@ void type_check_expr(ast_expr *expr, ast_type *request, bool cannull) {
     case AST_EXPR_TUPLE:
         panic("tuple not implemented");
         break;
-    case AST_OP_CALL: // TODO check parameter types
+    case AST_OP_CALL: 
         type_check_expr(expr->lhs, NULL, true);
         if(expr->lhs->vnt == AST_EXPR_IDENT && expr->lhs->pointed_vnt == AST_SYMBOL_STRUCT) {
             expr->type = ast_type_make_base(default_loc, expr->lhs->pointed.strct);
+            args = expr->lhs->pointed.strct->fields;
         } else if(expr->lhs->vnt == AST_EXPR_IDENT && expr->lhs->pointed_vnt == AST_SYMBOL_FUNC) {
             expr->type = type_copy(expr->lhs->pointed.func->type);
+            args = expr->lhs->pointed.func->args;
         } else if(expr->lhs->vnt == AST_EXPR_DOT && expr->lhs->pointed_vnt == AST_SYMBOL_FUNC) {
             if(expr->lhs->lhs->vnt == AST_EXPR_IDENT && expr->lhs->lhs->pointed_vnt == AST_SYMBOL_STRUCT) {
                 expr->type = type_copy(expr->lhs->pointed.func->type);
+                args = expr->lhs->pointed.func->args;
             } else {
-                expr->type = type_copy(expr->lhs->pointed.func->type); // TODO put self as first parameter
+                expr->type = type_copy(expr->lhs->pointed.func->type);
+                args = expr->lhs->pointed.func->args;
+                if(args && strcmp(args->name, "self") == 0) {
+                    if(expr->lhs->lhs->type->vnt != AST_TYPE_REF) {
+                        expr->lhs->lhs = ast_expr_make_op(expr->lhs->lhs->loc, AST_OP_REF, NULL, expr->lhs->lhs);
+                    }
+                    expr->lhs->lhs->next = expr->rhs;
+                    expr->rhs = expr->lhs->lhs;
+                    expr->lhs->lhs = NULL;
+                }
             }
         } else {
-            log_error("not a method", expr->lhs->loc);
+            log_error("not a func", expr->lhs->loc);
             exit(EXIT_FAILURE);
+        }
+        subexpr = expr->rhs;
+        while(args && subexpr) {
+            if(args->type->vnt == AST_TYPE_SLICE) {
+                if(args->next) { // TODO find better place for this check
+                    log_error("slice arg not last", args->loc);
+                }
+                type = args->type->subtype;
+                while(subexpr) {
+                    type_check_expr(subexpr, type, false);
+                    if(!type_cmp(type, subexpr->type)) {
+                        log_error("mismatched types in call", subexpr->loc);
+                    }
+                    subexpr = subexpr->next;
+                }
+                args = NULL;
+                break;
+            }
+            type_check_expr(subexpr, args->type, false);
+            if(!type_cmp(args->type, subexpr->type)) {
+                log_error("mismatched types in call", subexpr->loc);
+            }
+            args = args->next;
+            subexpr = subexpr->next;
+        }
+        if(args && args->type->vnt != AST_TYPE_SLICE) {
+            log_error("too few arguments", expr->loc);
+        }
+        if(subexpr) {
+            log_error("too many arguments", expr->loc);
         }
         break;
     case AST_OP_INDEX:

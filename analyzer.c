@@ -252,21 +252,21 @@ void resolve_symbols_num_lit(ast_prog *prog, ast_expr *expr) {
             } else if(strcmp(&data[i], "usize") == 0) {
                 expr->type = ast_type_make_base(default_loc, glob_struct_usize);
             } else if(strcmp(&data[i], "i8") == 0) {
-                expr->type = ast_type_make_base(default_loc, glob_struct_usize);
+                expr->type = ast_type_make_base(default_loc, glob_struct_i8);
             } else if(strcmp(&data[i], "u8") == 0) {
-                expr->type = ast_type_make_base(default_loc, glob_struct_usize);
+                expr->type = ast_type_make_base(default_loc, glob_struct_u8);
             } else if(strcmp(&data[i], "i16") == 0) {
-                expr->type = ast_type_make_base(default_loc, glob_struct_usize);
+                expr->type = ast_type_make_base(default_loc, glob_struct_i16);
             } else if(strcmp(&data[i], "u16") == 0) {
-                expr->type = ast_type_make_base(default_loc, glob_struct_usize);
+                expr->type = ast_type_make_base(default_loc, glob_struct_u16);
             } else if(strcmp(&data[i], "i32") == 0) {
-                expr->type = ast_type_make_base(default_loc, glob_struct_usize);
+                expr->type = ast_type_make_base(default_loc, glob_struct_i32);
             } else if(strcmp(&data[i], "u32") == 0) {
-                expr->type = ast_type_make_base(default_loc, glob_struct_usize);
+                expr->type = ast_type_make_base(default_loc, glob_struct_u32);
             } else if(strcmp(&data[i], "i64") == 0) {
-                expr->type = ast_type_make_base(default_loc, glob_struct_usize);
+                expr->type = ast_type_make_base(default_loc, glob_struct_i64);
             } else if(strcmp(&data[i], "u64") == 0) {
-                expr->type = ast_type_make_base(default_loc, glob_struct_usize);
+                expr->type = ast_type_make_base(default_loc, glob_struct_u64);
             } else {
                 panic("invalid number lit type suffix");
             }
