@@ -422,9 +422,6 @@ void resolve_symbols_type(ast_prog *prog, ast_type *type) {
     switch(type->vnt) {
     case AST_TYPE_BASE:
         break;
-    case AST_TYPE_REF:
-        resolve_symbols_type(prog, type->subtype);
-        break;
     case AST_TYPE_ARR:
         resolve_symbols_expr(prog, type->arrlen);
         if(!type->arrlen->is_const) {
@@ -432,6 +429,7 @@ void resolve_symbols_type(ast_prog *prog, ast_type *type) {
         }
         resolve_symbols_type(prog, type->subtype);
         break;
+    case AST_TYPE_REF:
     case AST_TYPE_SLICE:
         resolve_symbols_type(prog, type->subtype);
         break;
@@ -445,6 +443,18 @@ void resolve_symbols_type(ast_prog *prog, ast_type *type) {
     }
 }
 
+void resolve_symbols_var(ast_prog *prog, ast_var *var, bool mustconst) {
+    if(var->type) {
+        resolve_symbols_type(prog, var->type);
+    }
+    if(var->expr) {
+        resolve_symbols_expr(prog, var->expr);
+        if(mustconst && !var->expr->is_const) {
+            log_error("value not known at compile time", var->expr->loc);
+        }
+    }
+}
+
 void resolve_symbols_stmts(ast_prog *prog, ast_stmt *stmt, int scope) {
     ast_stmt *els;
     ast_symbol *old_symbol;
@@ -454,12 +464,7 @@ void resolve_symbols_stmts(ast_prog *prog, ast_stmt *stmt, int scope) {
         case AST_STMT_CONTINUE:
             break;
         case AST_STMT_VAR:
-            if(stmt->var->type) {
-                resolve_symbols_type(prog, stmt->var->type);
-            }
-            if(stmt->var->expr) {
-                resolve_symbols_expr(prog, stmt->var->expr);
-            }
+            resolve_symbols_var(prog, stmt->var, false);
             break;
         case AST_STMT_RETURN:
             if(stmt->expr) {
@@ -505,6 +510,7 @@ void resolve_symbols_stmts(ast_prog *prog, ast_stmt *stmt, int scope) {
 }
 
 void resolve_symbols_func(ast_prog *prog, ast_func *func) {
+    resolve_symbols_type(prog, func->type);
     ast_symbol *old_symbol;
     ast_var *arg = func->args;
     while(arg) {
@@ -514,38 +520,41 @@ void resolve_symbols_func(ast_prog *prog, ast_func *func) {
             log_note("here", old_symbol->loc);
             exit(EXIT_FAILURE);
         }
-        resolve_symbols_type(prog, arg->type);
+        resolve_symbols_var(prog, arg, false);
         arg = arg->next;
     }
     resolve_symbols_stmts(prog, func->body, 2);
 }
 
+void resolve_symbols_struct(ast_prog *prog, ast_struct *strct) {
+    ast_symbol_push(prog, strct->loc, "Self", AST_SYMBOL_STRUCT, strct, 1);
+    ast_var *var = strct->fields;
+    while(var) {
+        resolve_symbols_var(prog, var, false);
+        var = var->next;
+    }
+    ast_func *func = strct->funcs;
+    while(func) {
+        resolve_symbols_func(prog, func);
+        func = func->next;
+    }
+    ast_symbol_pop(prog, 1);
+}
+
 void resolve_symbols(ast_prog *prog) {
     ast_struct *strct = prog->structs;
-    ast_func *func;
     while(strct) {
-        ast_symbol_push(prog, strct->loc, "Self", AST_SYMBOL_STRUCT, strct, 1);
-        func = strct->funcs;
-        while(func) {
-            resolve_symbols_func(prog, func);
-            func = func->next;
-        }
-        ast_symbol_pop(prog, 1);
+        resolve_symbols_struct(prog, strct);
         strct = strct->next;
     }
-    func = prog->funcs;
+    ast_func *func = prog->funcs;
     while(func) {
         resolve_symbols_func(prog, func);
         func = func->next;
     }
     ast_var *var = prog->vars;
     while(var) {
-        if(var->expr) {
-            resolve_symbols_expr(prog, var->expr);
-            if(!var->expr->is_const) {
-                log_error("value not known at compile time", var->expr->loc);
-            }
-        }
+        resolve_symbols_var(prog, var, true);
         var = var->next;
     }
 }
@@ -631,31 +640,33 @@ void resolve_types_func(ast_prog *prog, ast_func *func) {
     resolve_types_stmts(prog, func->body);
 }
 
-void resolve_types(ast_prog *prog) {
-    ast_struct *strct = prog->structs;
-    ast_func *func;
-    ast_var *var;
-    while(strct) {
-        ast_symbol_push(prog, strct->loc, "Self", AST_SYMBOL_STRUCT, strct, 1);
-        var = strct->fields;
-        while(var) {
-            resolve_types_var(prog, var);
-            var = var->next;
-        }
-        func = strct->funcs;
-        while(func) {
-            resolve_types_func(prog, func);
-            func = func->next;
-        }
-        ast_symbol_pop(prog, 1);
-        strct = strct->next;
+void resolve_types_struct(ast_prog *prog, ast_struct *strct) {
+    ast_symbol_push(prog, strct->loc, "Self", AST_SYMBOL_STRUCT, strct, 1);
+    ast_var *var = strct->fields;
+    while(var) {
+        resolve_types_var(prog, var);
+        var = var->next;
     }
-    func = prog->funcs;
+    ast_func *func = strct->funcs;
     while(func) {
         resolve_types_func(prog, func);
         func = func->next;
     }
-    var = prog->vars;
+    ast_symbol_pop(prog, 1);
+}
+
+void resolve_types(ast_prog *prog) {
+    ast_struct *strct = prog->structs;
+    while(strct) {
+        resolve_types_struct(prog, strct);
+        strct = strct->next;
+    }
+    ast_func *func = prog->funcs;
+    while(func) {
+        resolve_types_func(prog, func);
+        func = func->next;
+    }
+    ast_var *var = prog->vars;
     while(var) {
         resolve_types_var(prog, var);
         var = var->next;

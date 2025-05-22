@@ -293,8 +293,8 @@ void type_check_expr(ast_expr *expr, ast_type *request, bool cannull) {
             log_error("mismatched types", expr->loc);
             exit(EXIT_FAILURE);
         }
-        if(expr->rhs->type->vnt != AST_TYPE_BASE || !expr->rhs->type->pointed.strct->numeric) {
-            log_error("nonnumeric type", expr->rhs->loc);
+        if(expr->lhs->type->vnt != AST_TYPE_BASE || !expr->lhs->type->pointed.strct->numeric) {
+            log_error("nonnumeric type", expr->lhs->loc);
             exit(EXIT_FAILURE);
         }
         expr->type = type_copy(expr->rhs->type);
@@ -320,8 +320,8 @@ void type_check_expr(ast_expr *expr, ast_type *request, bool cannull) {
             log_error("mismatched types", expr->loc);
             exit(EXIT_FAILURE);
         }
-        if(expr->rhs->type->vnt != AST_TYPE_BASE || !expr->rhs->type->pointed.strct->numeric) {
-            log_error("nonnumeric type", expr->rhs->loc);
+        if(expr->lhs->type->vnt != AST_TYPE_BASE || !expr->lhs->type->pointed.strct->numeric) {
+            log_error("nonnumeric type", expr->lhs->loc);
             exit(EXIT_FAILURE);
         }
         expr->type = ast_type_make_base(default_loc, glob_struct_bool);
@@ -362,13 +362,14 @@ void type_check_expr(ast_expr *expr, ast_type *request, bool cannull) {
             log_error("mismatched types", expr->loc);
             exit(EXIT_FAILURE);
         }
-        if(expr->rhs->type->vnt != AST_TYPE_BASE || !expr->rhs->type->pointed.strct->numeric) {
-            log_error("nonnumeric type", expr->rhs->loc);
+        if(expr->lhs->type->vnt != AST_TYPE_BASE || !expr->lhs->type->pointed.strct->numeric) {
+            log_error("nonnumeric type", expr->lhs->loc);
             exit(EXIT_FAILURE);
         }
         expr->type = type_copy(expr->lhs->type);
         break;
     case AST_OP_NEG:
+    case AST_OP_BIT_NOT:
         type_check_expr(expr->rhs, request, false);
         if(expr->rhs->type->vnt != AST_TYPE_BASE || !expr->rhs->type->pointed.strct->numeric) {
             log_error("nonnumeric type", expr->rhs->loc);
@@ -398,7 +399,7 @@ void type_check_expr(ast_expr *expr, ast_type *request, bool cannull) {
             log_error("nonnumeric type", expr->lhs->loc);
             exit(EXIT_FAILURE);
         }
-        expr->type = type_copy(expr->lhs->type);
+        expr->type = type_copy(expr->lhs->type); // could make void
         break;
     case AST_OP_PUT:
         type_check_expr(expr->rhs, NULL, false);
@@ -443,8 +444,6 @@ void type_check_expr(ast_expr *expr, ast_type *request, bool cannull) {
         }
         expr->type = type_copy(expr->lhs->type);
         break;
-    default:
-        panic("other expr, not implemented");
     }
     if(!cannull && expr->type == NULL) {
         log_error("invalid expression", expr->loc);
@@ -452,7 +451,37 @@ void type_check_expr(ast_expr *expr, ast_type *request, bool cannull) {
     }
 }
 
+void type_check_type(ast_type *type) {
+    ast_type *subtype;
+    switch(type->vnt) {
+    case AST_TYPE_BASE:
+        break;
+    case AST_TYPE_ARR:
+        type_check_type(type->subtype);
+        type_check_expr(type->arrlen, NULL, false);
+        if(type->arrlen->type->vnt != AST_TYPE_BASE || !type->arrlen->type->pointed.strct->numeric) {
+            log_error("nonnumeric type", type->arrlen->loc);
+            exit(EXIT_FAILURE);
+        }
+        break;
+    case AST_TYPE_REF:
+    case AST_TYPE_SLICE:
+        type_check_type(type->subtype);
+        break;
+    case AST_TYPE_TUPLE:
+        subtype = type->subtype;
+        while(subtype) {
+            type_check_type(subtype);
+            subtype = subtype->next;
+        }
+        break;
+    }
+}
+
 void type_check_var(ast_var *var) {
+    if(var->type) {
+        type_check_type(var->type);
+    }
     if(var->expr) {
         type_check_expr(var->expr, var->type, false);
         if(var->type) {
@@ -530,25 +559,43 @@ void type_check_stmts(ast_type *functype, ast_stmt *stmt) {
     }
 }
 
+void type_check_func(ast_func *func) {
+    type_check_type(func->type);
+    ast_var *var = func->args;
+    while(var) {
+        type_check_var(var);
+        var = var->next;
+    }
+    type_check_stmts(func->type, func->body);
+}
+
+void type_check_struct(ast_struct *strct) {
+    ast_var *var = strct->fields;
+    while(var) {
+        type_check_var(var);
+        var = var->next;
+    }
+    ast_func *func = strct->funcs;
+    while(func) {
+        type_check_stmts(func->type, func->body);
+        func = func->next;
+    }
+}
+
 void type_check(ast_prog *prog) {
     ast_var *var = prog->vars;
     while(var) {
         type_check_var(var);
         var = var->next;
     }
-    if(errors) return;
-    ast_func *func = prog->funcs;
-    while(func) {
-        type_check_stmts(func->type, func->body);
-        func = func->next;
-    }
     ast_struct *strct = prog->structs;
     while(strct) {
-        func = strct->funcs;
-        while(func) {
-            type_check_stmts(func->type, func->body);
-            func = func->next;
-        }
+        type_check_struct(strct);
         strct = strct->next;
+    }
+    ast_func *func = prog->funcs;
+    while(func) {
+        type_check_func(func);
+        func = func->next;
     }
 }
